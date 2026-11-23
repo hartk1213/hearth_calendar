@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Hearth</title>
+<link rel="icon" href="icon.png">
+<meta name="theme-color" content="#f7f3ec">
+<style>
+:root{--bg:#f7f3ec;--card:#fff;--ink:#2b2622;--muted:#8a8178;--line:#ebe4d9;--accent:#d9693b;--radius:16px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;user-select:none;-webkit-user-select:none}
+body{display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+.banner{background:#fff1cc;color:#6b5100;text-align:center;font-size:14px;padding:7px 12px}
+header{display:flex;align-items:center;gap:24px;padding:16px 24px 10px}
+.clock{font-size:54px;font-weight:700;letter-spacing:-1.5px;line-height:1}
+.clock small{font-size:20px;font-weight:600;letter-spacing:0;margin-left:4px;color:var(--muted)}
+.date{font-size:19px;color:var(--muted);margin-top:4px}
+.weather{display:flex;align-items:center;gap:10px}
+.weather .icon{font-size:38px}
+.weather .wt{font-size:26px;font-weight:650}
+.weather .wl{font-size:14px;color:var(--muted)}
+.spacer{flex:1}
+nav.tabs{display:flex;gap:4px;background:#ece5da;padding:5px;border-radius:999px}
+nav.tabs button{border:0;background:transparent;font-size:17px;padding:11px 18px;border-radius:999px;color:var(--muted);font-weight:600;white-space:nowrap}
+nav.tabs button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+main{flex:1;min-height:0;padding:6px 24px 20px;display:flex;flex-direction:column}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.toolbar h2{font-size:25px;margin:0 6px;font-weight:700}
+.btn{border:0;background:var(--card);font-size:17px;padding:10px 16px;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.07);min-height:46px;font-weight:550}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.icon{width:46px;padding:0;font-size:24px}
+.btn.danger{color:#c0392b}
+.btn.on{background:var(--ink);color:#fff}
+.seg{display:flex;background:#ece5da;border-radius:12px;padding:4px}
+.seg button{border:0;background:transparent;font-size:16px;padding:9px 14px;border-radius:9px;color:var(--muted);font-weight:600}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{display:flex;align-items:center;gap:7px;border:0;background:var(--card);border-radius:999px;padding:5px 13px 5px 5px;font-size:15px;font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.chip.off{opacity:.35}
+.av{width:28px;height:28px;border-radius:50%;color:#fff;display:inline-grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.av.big{width:46px;height:46px;font-size:19px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.empty{color:var(--muted);text-align:center;margin:18px 0;font-size:15px}
+
+/* week */
+.week{flex:1;min-height:0;display:grid;grid-template-columns:repeat(7,minmax(128px,1fr));gap:10px;overflow-x:auto}
+.day{background:var(--card);border-radius:var(--radius);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.day-h{padding:10px 12px 6px;display:flex;align-items:center;gap:8px}
+.day-h .dn{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700}
+.day-h .num{font-size:22px;font-weight:700;min-width:36px;height:36px;display:inline-grid;place-items:center}
+.day.today .num{background:var(--accent);color:#fff;border-radius:999px}
+.day-body{flex:1;overflow-y:auto;padding:4px 8px 10px;display:flex;flex-direction:column;gap:6px}
+.day-meal{border-top:1px dashed var(--line);padding:8px 12px;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev{border-radius:10px;padding:7px 9px;background:color-mix(in srgb,var(--c) 15%,white);border-left:4px solid var(--c);font-size:14px;line-height:1.25;cursor:pointer}
+.ev .t{font-size:12px;color:var(--muted);font-weight:650}
+.ev .n{font-weight:600;overflow-wrap:anywhere}
+.ev.allday{background:var(--c);color:#fff;border-left:0}
+.ev.allday .t{color:rgba(255,255,255,.85)}
+
+/* month */
+.month{flex:1;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:auto repeat(6,minmax(0,1fr));gap:6px;min-height:0}
+.mh{text-align:center;font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.mc{background:var(--card);border-radius:12px;padding:6px 7px;overflow:hidden;display:flex;flex-direction:column;gap:3px;min-height:0;cursor:pointer}
+.mc.other{opacity:.45}
+.mc .num{font-weight:700;font-size:15px}
+.mc.today .num{color:var(--accent)}
+.mchip{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:5px}
+.mchip i{width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
+.more{font-size:11px;color:var(--muted)}
+
+/* agenda */
+.agenda{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+.ag-day h3{margin:0 0 7px;font-size:18px}
+.ag-day .evs{display:flex;flex-direction:column;gap:6px;max-width:720px}
+
+/* chores */
+.board{flex:1;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:12px;overflow-x:auto;min-height:0}
+.col{background:var(--card);border-radius:var(--radius);display:flex;flex-direction:column;min-height:0}
+.col-h{display:flex;align-items:center;gap:12px;padding:14px;border-bottom:1px solid var(--line)}
+.pname{font-size:19px;font-weight:700}
+.progress{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:6px}
+.progress>i{display:block;height:100%;background:var(--c);transition:width .3s}
+.col-b{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.chore{display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:var(--bg);font-size:17px;cursor:pointer}
+.chore .ck{width:36px;height:36px;border-radius:50%;border:3px solid var(--c);flex:none;display:grid;place-items:center;color:#fff;font-weight:800;font-size:18px}
+.chore.done .ck{background:var(--c)}
+.chore .ct{flex:1}
+.chore.done .ct{text-decoration:line-through;color:var(--muted)}
+.kebab{border:0;background:none;font-size:22px;color:var(--muted);padding:2px 8px;line-height:1}
+
+/* lists */
+.lists{flex:1;display:grid;grid-template-columns:220px 1fr;gap:14px;min-height:0}
+.list-nav{display:flex;flex-direction:column;gap:6px}
+.list-nav .btn{text-align:left;display:flex;justify-content:space-between}
+.list-nav .count{opacity:.6}
+.list-main{background:var(--card);border-radius:var(--radius);display:flex;flex-direction:column;min-height:0;padding:14px}
+.add-row{display:flex;gap:8px;margin-bottom:6px}
+.add-row input{flex:1}
+.items{flex:1;overflow-y:auto}
+.item{display:flex;align-items:center;gap:14px;padding:13px 6px;border-bottom:1px solid var(--line);font-size:18px;cursor:pointer}
+.item .box{width:28px;height:28px;border-radius:8px;border:2px solid var(--muted);display:grid;place-items:center;flex:none;color:#fff;font-weight:800}
+.item.done{color:var(--muted)}
+.item.done .box{background:var(--muted);border-color:var(--muted)}
+.item.done .txt{text-decoration:line-through}
+.list-foot{display:flex;gap:8px;padding-top:10px}
+
+/* meals */
+.meals{flex:1;overflow:auto;background:var(--card);border-radius:var(--radius);padding:4px 14px}
+.meal-row{display:grid;grid-template-columns:90px repeat(3,minmax(120px,1fr));gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.meal-row:last-child{border-bottom:0}
+.meal-row.head{font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:700;letter-spacing:.06em}
+.meal-row .d{color:var(--muted);font-weight:600;font-size:14px}
+.meal-row .d b{display:block;font-size:22px;color:var(--ink)}
+.meal-row.today .d,.meal-row.today .d b{color:var(--accent)}
+.meal-row input{width:100%}
+
+/* forms + modal */
+input,select{font:inherit;font-size:17px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);user-select:text;-webkit-user-select:text;min-height:46px;width:100%}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+.overlay{position:fixed;inset:0;background:rgba(30,25,20,.35);display:grid;place-items:center;z-index:20;padding:16px}
+.modal{background:var(--card);border-radius:20px;padding:22px;width:min(520px,100%);max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal h3{margin:0 0 14px;font-size:22px}
+.modal .meta{margin:6px 0;font-size:17px;display:flex;align-items:center;gap:8px}
+.modal .evs{display:flex;flex-direction:column;gap:6px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;flex:1;min-width:0}
+.field label{font-size:13px;color:var(--muted);font-weight:650}
+.row{display:flex;gap:10px}
+.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+.check{display:flex;align-items:center;gap:10px;font-size:16px;margin:0 0 12px}
+.check input{width:24px;height:24px;min-height:0}
+.days-pick{display:flex;gap:6px}
+.days-pick button{flex:1;padding:11px 0;border-radius:10px;border:1.5px solid var(--line);background:#fff;font-weight:650}
+.days-pick button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+#night{position:fixed;inset:0;background:#000;color:#3a3a3a;display:none;place-items:center;z-index:50;font-size:140px;font-weight:200}
+body.night #night{display:grid}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:999px;font-size:15px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:60}
+#toast.show{opacity:1}
+
+@media (max-width:760px){
+  header{flex-wrap:wrap;gap:12px;padding:12px 14px 8px}
+  .clock{font-size:38px}
+  nav.tabs{order:5;width:100%;overflow-x:auto}
+  nav.tabs button{flex:1;padding:10px 8px;font-size:15px}
+  main{padding:6px 12px 12px}
+  .toolbar h2{font-size:20px;width:100%;order:-1;margin:0}
+  .lists{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .list-nav{flex-direction:row;overflow-x:auto}
+  .list-nav .btn{white-space:nowrap;gap:8px}
+  .meal-row{grid-template-columns:56px repeat(3,minmax(110px,1fr))}
+  .mchip{font-size:10px}
+  .mchip i{display:none}
+}
+
+/* settings + setup */
+.settings{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:16px;max-width:880px;width:100%;padding-bottom:20px}
+.sect{background:var(--card);border-radius:var(--radius);padding:18px 20px}
+.sect h3{margin:0 0 4px;font-size:20px}
+.sect .sub{margin:0 0 10px;color:var(--muted);font-size:15px}
+.srow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.srow .grow{flex:1;min-width:0}
+.srow .grow>div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.srow-actions{padding-top:12px}
+.row-btns{display:flex;gap:10px;flex-wrap:wrap}
+.sgrid{display:grid;grid-template-columns:200px 1fr;gap:14px 18px;align-items:center}
+.sgrid>label{font-weight:600}
+.sgrid .seg{width:max-content;max-width:100%;overflow-x:auto}
+.swatches{display:flex;flex-wrap:wrap;gap:10px}
+.swatch{width:42px;height:42px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--line);padding:0}
+.swatch.on{box-shadow:0 0 0 3px var(--ink)}
+.status{font-size:15px;margin-top:8px;min-height:1em}
+.status.err{color:#c0392b}
+details.help{font-size:14px;color:var(--muted);margin:-4px 0 12px}
+details.help summary{cursor:pointer;color:var(--accent);font-weight:600;padding:4px 0}
+details.help li{margin:6px 0;line-height:1.4}
+.results{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+.btn.result{text-align:left}
+.empty-card{background:var(--card);border:2px dashed var(--line);border-radius:var(--radius);padding:16px 20px;display:flex;align-items:center;gap:16px;margin-bottom:12px;flex-wrap:wrap}
+.empty-card p{margin:0;flex:1;font-size:17px}
+.setup-wrap{flex:1;overflow-y:auto;display:flex;justify-content:center;padding:10px 0 30px}
+.setup{background:var(--card);border-radius:22px;padding:28px 30px;width:min(680px,100%);height:max-content;box-shadow:0 10px 40px rgba(0,0,0,.06)}
+.setup h2{font-size:30px;margin:12px 0 6px}
+.setup .lead{font-size:18px;color:var(--muted);margin:0 0 20px;line-height:1.45}
+.setup .actions{margin-top:24px}
+.dots{display:flex;gap:6px}
+.dots i{width:28px;height:6px;border-radius:3px;background:var(--line)}
+.dots i.on{background:var(--accent)}
+.btn:disabled{opacity:.45}
+#pinmodal{z-index:30}
+@media (max-width:760px){.sgrid{grid-template-columns:1fr;gap:8px}.sgrid>label{margin-top:8px}.setup{padding:20px}}
+
+/* pantry + meal ideas */
+.meals-layout{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px}
+.pantry{background:var(--card);border-radius:var(--radius);padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.pantry h3{margin:0;font-size:19px}
+.pantry-h{display:flex;align-items:center;justify-content:space-between}
+.pantry p{margin:0}
+.linkish{border:0;background:none;color:var(--accent);font-weight:650;font-size:14px;padding:6px 4px;cursor:pointer}
+.chips-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.pchip{display:inline-flex;align-items:center;gap:2px;background:var(--bg);border-radius:999px;padding:5px 4px 5px 12px;font-size:15px}
+.pchip button{border:0;background:none;font-size:18px;line-height:1;color:var(--muted);width:28px;height:28px;border-radius:50%;cursor:pointer}
+.ideas{border-top:1px solid var(--line);margin-top:8px;padding-top:12px;display:flex;flex-direction:column;gap:10px}
+.ideas .seg{align-self:flex-start}
+.btn.wide{width:100%}
+.ideas-off{border-top:1px solid var(--line);margin-top:8px;padding-top:12px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.idea{background:var(--bg);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.idea-name{font-weight:700;font-size:18px}
+.idea-desc{font-size:15px}
+.need{display:flex;align-items:center;gap:8px;font-size:14px;color:#9a5b12;flex-wrap:wrap}
+.need.ok{color:#2e7d4f}
+.steps{font-size:14px}
+.steps summary{cursor:pointer;color:var(--accent);font-weight:600}
+.steps ol{margin:6px 0 0;padding-left:20px}
+.steps li{margin:3px 0}
+.plan-row{display:flex;gap:8px}
+.plan-row select{flex:1}
+@media (max-width:1100px){.meals-layout{grid-template-columns:1fr;overflow-y:auto}.meals{flex:none}.pantry{overflow:visible}}
+
+.idea-btns{display:flex;gap:8px;flex-wrap:wrap}
+.idea-btns .btn{flex:1;min-width:140px}
+.idea-img{width:100%;height:140px;object-fit:cover;border-radius:10px}
+.linkish.left{align-self:flex-start;padding-left:0}
+.recipe h4{margin:14px 0 6px;font-size:16px}
+.recipe-img{width:100%;max-height:220px;object-fit:cover;border-radius:12px}
+.ingr{margin:0;padding-left:20px}
+.ingr li{margin:4px 0}
+.ingr li.miss{color:#9a5b12}
+.ingr .tag{margin-left:8px;font-size:11px;font-weight:700;text-transform:uppercase;background:#fbe6cc;color:#9a5b12;border-radius:6px;padding:1px 6px}
+.rsteps{margin:0;padding-left:22px}
+.rsteps li{margin:6px 0;line-height:1.45}
+.recipe a{color:var(--accent);font-weight:600}
+.btn.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.btn.spin{animation:none;opacity:.5}}
+</style>
+</head>
+<body>
+<div id="banner" class="banner" hidden>Demo mode: a sample family with made-up events. Changes are saved only in this browser.</div>
+<header>
+  <div>
+    <div class="clock"><span id="clock"></span><small id="ampm"></small></div>
+    <div class="date" id="date"></div>
+  </div>
+  <div class="weather" id="weather"></div>
+  <div class="spacer"></div>
+  <nav class="tabs">
+    <button data-tab="calendar">Calendar</button>
+    <button data-tab="chores">Chores</button>
+    <button data-tab="lists">Lists</button>
+    <button data-tab="meals">Meals</button>
+    <button data-tab="settings" aria-label="Settings">⚙ Settings</button>
+  </nav>
+</header>
+<main></main>
+<div id="night"></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+/* ---------- tiny helpers ---------- */
+const $ = (s, el = document) => el.querySelector(s);
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === false || v == null) continue;
+    if (k === "class") el.className = v;
+    else if (k === "style") el.style.cssText = v;
+    else if (k === "value") el.value = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const k of kids.flat(Infinity)) {
+    if (k == null || k === false) continue;
+    el.append(k.nodeType ? k : document.createTextNode(String(k)));
+  }
+  return el;
+}
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const isoLocal = d => `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const parseYmd = s => { const [y, m, d] = s.slice(0, 10).split("-").map(Number); return new Date(y, m - 1, d); };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const startOfWeek = d => { const x = startOfDay(d); return addDays(x, -((x.getDay() - (CFG.week_start || 0) + 7) % 7)); };
+const fmtTime = d => d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+const fmtLong = d => d.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+const EVERYONE = "Everyone";
+
+/* ---------- app state ---------- */
+let CFG = null, STATE = null, FEED = [], EV = [], WX = null;
+const UI = { tab: "calendar", cal: "week", anchor: startOfDay(new Date()), hidden: new Set(), listId: null, mealsAnchor: null };
+let lastTouch = Date.now(), wakeUntil = 0, saveQ = Promise.resolve(), saving = 0, renderedDay = ymd(new Date()), feedToken = 0;
+
+/* ---------- demo data (used when there's no server, e.g. the preview) ---------- */
+const DEMO_CFG = {
+  title: "The Parkers", setup_done: true, pin: false, recipes_enabled: true, recipes_key_hint: "…demo", ai_enabled: true, ai_key_hint: "…demo", ai_model: "claude-haiku-5-5", ui_scale: 1, temperature_unit: "fahrenheit", place: "", latitude: null, longitude: null,
+  week_start: 0, default_view: "week", idle_reset_minutes: 3, night_mode: null,
+  calendars: [
+    { id: "d1", member: "Mom", label: "Work", hint: "calendar.google.com · …x7Qa" },
+    { id: "d2", member: "Dad", label: "Family", hint: "p34-caldav.icloud.com · …9Lm2" },
+    { id: "d3", member: "Maya", label: "Soccer team", hint: "calendar.google.com · …Tk3e" }
+  ],
+  members: [
+    { name: "Mom", color: "#e07a5f" }, { name: "Dad", color: "#3d85c6" },
+    { name: "Maya", color: "#81b29a" }, { name: "Leo", color: "#f2a541" }
+  ]
+};
+let DEMO_EVENTS = null;
+function demoEvents() {
+  if (DEMO_EVENTS) return DEMO_EVENTS;
+  const w = startOfWeek(new Date()), out = [];
+  const at = (off, hh, mm, mins, title, member, location = "") => {
+    const s = addDays(w, off); s.setHours(hh, mm, 0, 0);
+    out.push({ id: uid(), title, member, location, start: isoLocal(s), end: isoLocal(new Date(s.getTime() + mins * 60000)), allDay: false, source: "feed" });
+  };
+  const allDay = (off, len, title, member) => {
+    const s = addDays(w, off);
+    out.push({ id: uid(), title, member, start: ymd(s), end: ymd(addDays(s, len)), allDay: true, source: "feed" });
+  };
+  for (const wk of [0, 7, -7]) {
+    at(wk + 2, 16, 0, 90, "Soccer practice", "Maya", "Riverside Park");
+    at(wk + 4, 16, 0, 90, "Soccer practice", "Maya", "Riverside Park");
+    at(wk + 3, 15, 30, 45, "Piano lesson", "Leo");
+    for (const d of [1, 2, 3, 4, 5]) at(wk + d, 8, 30, 30, "Team standup", "Dad");
+    allDay(wk + 3, 1, "Trash & recycling", EVERYONE);
+    at(wk + 0, 10, 0, 75, "Family brunch", EVERYONE, "Home");
+  }
+  at(1, 10, 0, 60, "Dentist", "Mom", "Smile Dental");
+  at(5, 19, 0, 120, "Book club", "Mom");
+  at(6, 9, 30, 120, "Swim meet", "Leo", "Aquatic Center");
+  at(6, 19, 0, 150, "Date night", "Dad");
+  at(8, 12, 30, 60, "Lunch with Priya", "Mom");
+  at(4, 18, 30, 60, "Parent–teacher night", "Mom", "Lincoln Elementary");
+  allDay(9, 1, "Grandma's birthday 🎂", EVERYONE);
+  allDay(11, 3, "Scout camping trip", "Dad");
+  return (DEMO_EVENTS = out);
+}
+function demoState() {
+  const w = startOfWeek(new Date()), meals = {};
+  const dinners = ["Roast chicken", "Tacos", "Pasta night", "Stir-fry", "Leftovers", "Pizza Friday", "Grill out"];
+  for (let i = 0; i < 7; i++) meals[ymd(addDays(w, i))] = { breakfast: i % 2 ? "Oatmeal" : "Eggs & toast", dinner: dinners[i] };
+  const all = [0, 1, 2, 3, 4, 5, 6], wkd = [1, 2, 3, 4, 5];
+  const c = (title, member, days) => ({ id: uid(), title, member, days, done: {} });
+  return {
+    rev: 1, events: [], meals,
+    pantry: ["chicken", "rice", "eggs", "frozen peas", "soy sauce", "tortillas", "cheddar", "black beans", "canned tomatoes", "chicken broth"].map(text => ({ id: uid(), text })),
+    chores: [
+      c("Pack lunches", "Mom", wkd), c("Water plants", "Mom", [0, 3]),
+      c("Walk the dog", "Dad", all), c("Take out trash", "Dad", [3]),
+      c("Make bed", "Maya", all), c("Homework", "Maya", wkd), c("Empty dishwasher", "Maya", [1, 3, 5, 6]),
+      c("Feed the dog", "Leo", all), c("Practice piano 20 min", "Leo", wkd), c("Tidy room", "Leo", [0, 6])
+    ],
+    lists: [
+      { id: "grocery", name: "Groceries", items: ["Milk", "Bananas", "Tortillas", "Shredded cheese", "Coffee", "Dog food"].map(t => ({ id: uid(), text: t, done: false })) },
+      { id: "todo", name: "To-do", items: [{ id: uid(), text: "Sign field trip form", done: false }, { id: uid(), text: "Book plumber", done: true }, { id: uid(), text: "Return library books", done: false }] }
+    ]
+  };
+}
+
+/* ---------- API (falls back to demo mode) ---------- */
+/* The screen keeps a copy of the last good config, state and events so it
+   keeps showing something useful if the server or database is down. */
+const cache = {
+  get(k) { try { return JSON.parse(localStorage.getItem("hearth-" + k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem("hearth-" + k, JSON.stringify(v)); } catch {} }
+};
+const API = {
+  demo: false, offline: false,
+  async init() {
+    try {
+      const r = await fetch("api/config", { cache: "no-store" });
+      if (!r.ok) throw new Error();
+      CFG = await r.json();
+      cache.set("cfg", CFG);
+    } catch {
+      const saved = cache.get("cfg");
+      if (saved) { this.offline = true; CFG = saved; }
+      else { this.demo = true; CFG = DEMO_CFG; }
+    }
+  },
+  async events(start, end) {
+    if (this.demo) return demoEvents();
+    if (this.offline) return cache.get("feed");
+    const r = await fetch(`api/events?start=${ymd(start)}&end=${ymd(end)}`, { cache: "no-store" });
+    if (!r.ok) return null;
+    const evs = await r.json(); cache.set("feed", evs); return evs;
+  },
+  async state() {
+    if (this.demo) return cache.get("demo") || demoState();
+    if (this.offline) return cache.get("state") || { rev: -1 };
+    const r = await fetch("api/state", { cache: "no-store" });
+    if (!r.ok) throw new Error("state unavailable");
+    const s = await r.json(); cache.set("state", s); return s;
+  },
+  async save(s) {
+    if (this.demo) {
+      s.rev = (s.rev || 0) + 1;
+      cache.set("demo", s);
+      return { ok: true, state: s };
+    }
+    if (this.offline) return { ok: false, state: null };
+    const r = await fetch("api/state", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(s) });
+    const j = await r.json();
+    if (r.ok) cache.set("state", s);
+    return { ok: r.ok, state: r.status === 409 ? j : (r.ok ? j : null) };
+  }
+};
+
+/* Apply a change locally, then save. If another screen saved first, take
+   theirs and re-apply this change on top. */
+function commit(mut, { silent = false } = {}) {
+  mut(STATE);
+  if (!silent) render();
+  saving++;
+  saveQ = saveQ.then(async () => {
+    try {
+      let res = await API.save(STATE);
+      if (!res.ok && res.state && res.state.rev != null) {
+        STATE = res.state; normalizeState(); mut(STATE);
+        res = await API.save(STATE);
+        if (!silent) render();
+      }
+      if (res.ok) STATE.rev = res.state.rev;
+      else toast(API.offline ? "Server unreachable: change not saved" : "Couldn't save that change");
+    } catch { toast("Offline: change not saved"); }
+    finally { saving--; }
+  });
+}
+function normalizeState() {
+  STATE.events ||= []; STATE.chores ||= []; STATE.lists ||= []; STATE.meals ||= {}; STATE.pantry ||= [];
+}
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+/* ---------- people ---------- */
+const members = () => CFG.members || [];
+const colorOf = name => (members().find(m => m.name === name) || {}).color || "#9b8f84";
+const visible = name => !name || name === EVERYONE || !UI.hidden.has(name);
+const avatar = (name, big) => h("span", { class: "av" + (big ? " big" : ""), style: `background:${colorOf(name)}` }, name === EVERYONE ? "★" : (name || "?")[0].toUpperCase());
+function memberSelect(value) {
+  const s = h("select", {}, h("option", { value: EVERYONE }, EVERYONE), members().map(m => h("option", { value: m.name }, m.name)));
+  s.value = value; return s;
+}
+const field = (label, el) => h("div", { class: "field" }, h("label", {}, label), el);
+function seg(opts, cur, on) {
+  return h("div", { class: "seg" }, opts.map(([v, l]) => h("button", { class: v === cur ? "on" : "", onclick: () => on(v) }, l)));
+}
+
+/* ---------- events ---------- */
+function norm(e) {
+  const s = e.allDay ? parseYmd(e.start) : new Date(e.start);
+  let en = e.end ? (e.allDay ? parseYmd(e.end) : new Date(e.end)) : s;
+  if (e.allDay && en <= s) en = addDays(s, 1);
+  return { ...e, _s: s, _e: en };
+}
+const allEvents = () => [...FEED, ...STATE.events.map(e => ({ ...e, source: "local" }))].map(norm);
+function eventsOn(day) {
+  const ds = startOfDay(day), de = addDays(ds, 1);
+  return EV.filter(e => visible(e.member) && e._s < de && (e._e > ds || e._s >= ds))
+    .sort((a, b) => (b.allDay - a.allDay) || (a._s - b._s));
+}
+function viewRange() {
+  if (UI.cal === "month") { const s = startOfWeek(new Date(UI.anchor.getFullYear(), UI.anchor.getMonth(), 1)); return [s, addDays(s, 42)]; }
+  if (UI.cal === "week") { const s = startOfWeek(UI.anchor); return [s, addDays(s, 7)]; }
+  const s = startOfDay(UI.anchor); return [s, addDays(s, 14)];
+}
+async function refreshNow(btn) {
+  if (btn) btn.classList.add("spin");
+  try {
+    if (!API.demo) {
+      const r = await fetch("api/events/refresh", { method: "POST" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "Couldn't check the calendars.");
+      if (j.failed && j.failed.length) { await loadFeeds(); toast(`Couldn't reach: ${j.failed.join(", ")}. Showing the last copy.`); return; }
+    }
+    await loadFeeds();
+    toast("Calendars are up to date");
+  } catch (e) { toast(e.message === "Failed to fetch" ? "Can't reach the Hearth server right now." : e.message); }
+  if (btn) btn.classList.remove("spin");
+}
+async function loadFeeds() {
+  const [s, e] = viewRange(), t = startOfDay(new Date());
+  const from = s < t ? s : t, to = e > addDays(t, 8) ? e : addDays(t, 8);
+  const token = ++feedToken;
+  try {
+    const evs = await API.events(addDays(from, -1), addDays(to, 1));
+    if (evs && token === feedToken) { FEED = evs; if (UI.tab === "calendar") render(); }
+  } catch {}
+}
+
+/* ---------- header, weather, night ---------- */
+function renderClock() {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat([], { hour: "numeric", minute: "2-digit" }).formatToParts(now);
+  $("#clock").textContent = parts.filter(p => p.type !== "dayPeriod").map(p => p.value).join("").trim();
+  $("#ampm").textContent = (parts.find(p => p.type === "dayPeriod") || {}).value || "";
+  $("#date").textContent = fmtLong(now) + (CFG.title ? ` · ${CFG.title}` : "");
+  $("#night").textContent = $("#clock").textContent;
+  checkNight();
+}
+function wxIcon(c) {
+  if (c === 0) return "☀️"; if (c <= 2) return "🌤️"; if (c === 3) return "☁️"; if (c <= 48) return "🌫️";
+  if (c <= 67 || (c >= 80 && c <= 82)) return "🌧️"; if (c <= 77 || c === 85 || c === 86) return "❄️"; return "⛈️";
+}
+function renderWeather() {
+  if (!WX) return;
+  $("#weather").replaceChildren(h("span", { class: "icon" }, wxIcon(WX.code)),
+    h("div", {}, h("div", { class: "wt" }, `${WX.t}°`), h("div", { class: "wl" }, `H ${WX.hi}°  L ${WX.lo}°`)));
+}
+async function loadWeather() {
+  if (CFG.latitude == null || CFG.longitude == null) return;
+  try {
+    const u = `https://api.open-meteo.com/v1/forecast?latitude=${CFG.latitude}&longitude=${CFG.longitude}` +
+      `&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=auto` +
+      `&temperature_unit=${CFG.temperature_unit || "fahrenheit"}`;
+    const j = await (await fetch(u)).json();
+    WX = { t: Math.round(j.current.temperature_2m), code: j.current.weather_code, hi: Math.round(j.daily.temperature_2m_max[0]), lo: Math.round(j.daily.temperature_2m_min[0]) };
+    renderWeather();
+  } catch {}
+}
+function checkNight() {
+  const n = CFG.night_mode; if (!n) return;
+  const hr = new Date().getHours();
+  const inNight = n.start > n.end ? (hr >= n.start || hr < n.end) : (hr >= n.start && hr < n.end);
+  document.body.classList.toggle("night", inNight && Date.now() > wakeUntil);
+}
+
+/* ---------- render ---------- */
+function render() {
+  renderedDay = ymd(new Date());
+  document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === UI.tab));
+  const m = $("main"); m.replaceChildren();
+  ({ calendar: renderCalendar, chores: renderChores, lists: renderLists, meals: renderMeals, settings: renderSettings, setup: renderSetup })[UI.tab](m);
+}
+
+/* calendar */
+function renderCalendar(m) {
+  EV = allEvents();
+  if (!API.demo && !CFG.setup_done) m.append(h("div", { class: "empty-card" },
+    h("p", {}, "Finish setting up your family calendar: add your family and link your calendars."),
+    h("button", { class: "btn primary", onclick: () => { UI.tab = "setup"; render(); } }, "Continue setup")));
+  m.append(h("div", { class: "toolbar" },
+    h("button", { class: "btn icon", onclick: () => shift(-1), "aria-label": "Previous" }, "‹"),
+    h("button", { class: "btn", onclick: () => { UI.anchor = startOfDay(new Date()); refreshCal(); } }, "Today"),
+    h("button", { class: "btn icon", onclick: () => shift(1), "aria-label": "Next" }, "›"),
+    h("h2", {}, calTitle()),
+    h("div", { class: "spacer" }),
+    h("div", { class: "chips" }, members().map(mm => h("button", {
+      class: "chip" + (UI.hidden.has(mm.name) ? " off" : ""),
+      onclick: () => { UI.hidden.has(mm.name) ? UI.hidden.delete(mm.name) : UI.hidden.add(mm.name); render(); }
+    }, avatar(mm.name), mm.name))),
+    seg([["week", "Week"], ["month", "Month"], ["agenda", "Agenda"]], UI.cal, v => { UI.cal = v; refreshCal(); }),
+    (CFG.calendars || []).length ? h("button", { class: "btn icon", "aria-label": "Check calendars now", title: "Check calendars now", onclick: e => refreshNow(e.currentTarget) }, "\u21bb") : null,
+    h("button", { class: "btn primary", onclick: () => editEvent({ date: ymd(UI.anchor) }) }, "+ Event")
+  ));
+  m.append(UI.cal === "week" ? weekView() : UI.cal === "month" ? monthView() : agendaView());
+}
+function shift(n) {
+  const a = UI.anchor;
+  UI.anchor = UI.cal === "month" ? new Date(a.getFullYear(), a.getMonth() + n, 1) : addDays(a, n * (UI.cal === "week" ? 7 : 14));
+  refreshCal();
+}
+function refreshCal() { render(); loadFeeds(); }
+function calTitle() {
+  if (UI.cal === "month") return UI.anchor.toLocaleDateString([], { month: "long", year: "numeric" });
+  const [s, e] = viewRange(), last = addDays(e, -1), o = { month: "short", day: "numeric" };
+  return `${s.toLocaleDateString([], o)} – ${last.toLocaleDateString([], o)}, ${last.getFullYear()}`;
+}
+function evCard(e) {
+  return h("div", { class: "ev" + (e.allDay ? " allday" : ""), style: `--c:${colorOf(e.member)}`, onclick: x => { x.stopPropagation(); showEvent(e); } },
+    h("div", { class: "t" }, e.allDay ? "All day" : fmtTime(e._s)),
+    h("div", { class: "n" }, e.title));
+}
+function weekView() {
+  const s = startOfWeek(UI.anchor), today = ymd(new Date()), g = h("div", { class: "week" });
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(s, i), k = ymd(d), dinner = (STATE.meals[k] || {}).dinner;
+    g.append(h("div", { class: "day" + (k === today ? " today" : "") },
+      h("div", { class: "day-h" }, h("span", { class: "num" }, d.getDate()), h("span", { class: "dn" }, d.toLocaleDateString([], { weekday: "short" }))),
+      h("div", { class: "day-body", onclick: ev => { if (ev.target === ev.currentTarget) editEvent({ date: k }); } }, eventsOn(d).map(evCard)),
+      dinner ? h("div", { class: "day-meal" }, "🍽 ", dinner) : null));
+  }
+  return g;
+}
+function monthView() {
+  const first = new Date(UI.anchor.getFullYear(), UI.anchor.getMonth(), 1), s = startOfWeek(first), today = ymd(new Date());
+  const g = h("div", { class: "month" });
+  for (let i = 0; i < 7; i++) g.append(h("div", { class: "mh" }, addDays(s, i).toLocaleDateString([], { weekday: "short" })));
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(s, i), k = ymd(d), evs = eventsOn(d);
+    g.append(h("div", { class: "mc" + (d.getMonth() !== first.getMonth() ? " other" : "") + (k === today ? " today" : ""), onclick: () => showDay(d) },
+      h("div", { class: "num" }, d.getDate()),
+      evs.slice(0, 3).map(e => h("div", { class: "mchip", style: `--c:${colorOf(e.member)}` }, h("i"), e.title)),
+      evs.length > 3 ? h("div", { class: "more" }, `+${evs.length - 3} more`) : null));
+  }
+  return g;
+}
+function dayLabel(d) {
+  const diff = Math.round((startOfDay(d) - startOfDay(new Date())) / 864e5);
+  const base = d.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" });
+  return diff === 0 ? `Today · ${base}` : diff === 1 ? `Tomorrow · ${base}` : base;
+}
+function agendaView() {
+  const s = startOfDay(UI.anchor), wrap = h("div", { class: "agenda" });
+  for (let i = 0; i < 14; i++) {
+    const d = addDays(s, i), evs = eventsOn(d);
+    if (evs.length) wrap.append(h("div", { class: "ag-day" }, h("h3", {}, dayLabel(d)), h("div", { class: "evs" }, evs.map(evCard))));
+  }
+  if (!wrap.children.length) wrap.append(h("p", { class: "empty" }, "Nothing scheduled in the next two weeks."));
+  return wrap;
+}
+function showDay(d) {
+  const evs = eventsOn(d);
+  openModal(dayLabel(d), h("div", { class: "evs" }, evs.length ? evs.map(evCard) : h("p", { class: "empty" }, "Nothing scheduled.")),
+    [["Close", "", () => {}], ["+ Event", "primary", () => { setTimeout(() => editEvent({ date: ymd(d) }), 0); }]]);
+}
+function showEvent(e) {
+  let when;
+  if (e.allDay) {
+    const last = addDays(e._e, -1);
+    when = ymd(last) === ymd(e._s) ? fmtLong(e._s) : `${fmtLong(e._s)} – ${fmtLong(last)}`;
+  } else when = `${fmtLong(e._s)}, ${fmtTime(e._s)} – ${fmtTime(e._e)}`;
+  const who = e.member || EVERYONE;
+  const body = h("div", {},
+    h("p", { class: "meta" }, "🕒 ", when),
+    e.location ? h("p", { class: "meta" }, "📍 ", e.location) : null,
+    h("p", { class: "meta" }, avatar(who), who, h("span", { class: "muted small" }, e.source === "local" ? "· added on this calendar" : "· from a synced calendar")));
+  const actions = [];
+  if (e.source === "local") {
+    actions.push(["Delete", "danger", () => commit(s => { s.events = s.events.filter(x => x.id !== e.id); })]);
+    actions.push(["Edit", "", () => { setTimeout(() => editEvent({ event: e }), 0); }]);
+  }
+  actions.push(["Close", "primary", () => {}]);
+  openModal(e.title, body, actions);
+}
+function editEvent({ date, event: ev }) {
+  const f = {
+    title: h("input", { value: ev ? ev.title : "", placeholder: "What's happening?" }),
+    member: memberSelect(ev ? ev.member || EVERYONE : EVERYONE),
+    date: h("input", { type: "date", value: ev ? ev.start.slice(0, 10) : date }),
+    allDay: h("input", { type: "checkbox" }),
+    start: h("input", { type: "time", value: ev && !ev.allDay ? ev.start.slice(11, 16) : "09:00" }),
+    end: h("input", { type: "time", value: ev && !ev.allDay && ev.end ? ev.end.slice(11, 16) : "10:00" }),
+    location: h("input", { value: ev ? ev.location || "" : "", placeholder: "Optional" })
+  };
+  f.allDay.checked = !!(ev && ev.allDay);
+  const times = h("div", { class: "row" }, field("Starts", f.start), field("Ends", f.end));
+  const sync = () => { times.style.display = f.allDay.checked ? "none" : "flex"; };
+  f.allDay.addEventListener("change", sync); sync();
+  const id = ev ? ev.id : uid();
+  openModal(ev ? "Edit event" : "New event",
+    h("div", {}, field("Title", f.title), h("div", { class: "row" }, field("Who", f.member), field("Date", f.date)),
+      h("label", { class: "check" }, f.allDay, "All day"), times, field("Location", f.location)),
+    [["Cancel", "", () => {}], ["Save", "primary", () => {
+      const title = f.title.value.trim(), d = f.date.value;
+      if (!title || !d) { (title ? f.date : f.title).focus(); return false; }
+      let rec;
+      if (f.allDay.checked) rec = { start: d, end: ymd(addDays(parseYmd(d), 1)), allDay: true };
+      else {
+        const s = new Date(`${d}T${f.start.value || "09:00"}`);
+        let e = new Date(`${d}T${f.end.value || "00:00"}`);
+        if (isNaN(e) || e <= s) e = new Date(s.getTime() + 3600000);
+        rec = { start: isoLocal(s), end: isoLocal(e), allDay: false };
+      }
+      Object.assign(rec, { title, member: f.member.value, location: f.location.value.trim() });
+      commit(st => {
+        const x = st.events.find(x => x.id === id);
+        if (x) Object.assign(x, rec); else st.events.push({ id, ...rec });
+      });
+    }]]);
+  if (!ev) setTimeout(() => f.title.focus(), 50);
+}
+
+/* chores */
+function renderChores(m) {
+  const now = new Date(), k = ymd(now), dow = now.getDay();
+  m.append(h("div", { class: "toolbar" }, h("h2", {}, "Today's chores"), h("span", { class: "muted" }, now.toLocaleDateString([], { weekday: "long" })),
+    h("div", { class: "spacer" }), h("button", { class: "btn", onclick: () => { UI.tab = "settings"; render(); } }, "People"),
+    h("button", { class: "btn primary", onclick: () => editChore() }, "+ Chore")));
+  const people = members().map(x => x.name);
+  if (STATE.chores.some(c => c.member === EVERYONE)) people.push(EVERYONE);
+  if (!people.length) {
+    m.append(h("div", { class: "empty-card" }, h("p", {}, "Add the people in your family first, then give each of them chores."),
+      h("button", { class: "btn primary", onclick: () => { UI.tab = "settings"; render(); } }, "Add people")));
+    return;
+  }
+  const board = h("div", { class: "board" });
+  for (const p of people) {
+    const list = STATE.chores.filter(c => c.member === p && c.days.includes(dow));
+    const done = list.filter(c => c.done && c.done[k]).length;
+    board.append(h("div", { class: "col", style: `--c:${colorOf(p)}` },
+      h("div", { class: "col-h" }, avatar(p, true), h("div", { style: "flex:1" },
+        h("div", { class: "pname" }, p, list.length && done === list.length ? " 🎉" : ""),
+        h("div", { class: "muted small" }, `${done} of ${list.length} done`),
+        h("div", { class: "progress" }, h("i", { style: `width:${list.length ? done / list.length * 100 : 0}%` })))),
+      h("div", { class: "col-b" }, list.length ? list.map(c => choreRow(c, k)) : h("p", { class: "empty" }, "Nothing today ✨"))));
+  }
+  m.append(board);
+}
+function choreRow(ch, k) {
+  const isDone = !!(ch.done && ch.done[k]);
+  return h("div", { class: "chore" + (isDone ? " done" : ""), onclick: () => {
+      const target = !isDone;
+      commit(s => {
+        const x = s.chores.find(x => x.id === ch.id); if (!x) return;
+        x.done ||= {};
+        if (target) x.done[k] = true; else delete x.done[k];
+        const cutoff = ymd(addDays(new Date(), -30));
+        for (const d of Object.keys(x.done)) if (d < cutoff) delete x.done[d];
+      });
+    } },
+    h("span", { class: "ck" }, isDone ? "✓" : ""), h("span", { class: "ct" }, ch.title),
+    h("button", { class: "kebab", "aria-label": "Edit chore", onclick: e => { e.stopPropagation(); editChore(ch); } }, "⋯"));
+}
+function editChore(ch) {
+  const title = h("input", { value: ch ? ch.title : "", placeholder: "e.g. Feed the dog" });
+  const who = memberSelect(ch ? ch.member : (members()[0] || {}).name || EVERYONE);
+  const days = new Set(ch ? ch.days : [0, 1, 2, 3, 4, 5, 6]);
+  const names = ["S", "M", "T", "W", "T", "F", "S"];
+  const order = [...Array(7)].map((_, i) => (i + (CFG.week_start || 0)) % 7);
+  const pick = h("div", { class: "days-pick" }, order.map(i => {
+    const b = h("button", { type: "button", class: days.has(i) ? "on" : "", onclick: () => { days.has(i) ? days.delete(i) : days.add(i); b.classList.toggle("on", days.has(i)); } }, names[i]);
+    return b;
+  }));
+  const id = ch ? ch.id : uid();
+  const actions = [];
+  if (ch) actions.push(["Delete", "danger", () => commit(s => { s.chores = s.chores.filter(x => x.id !== id); })]);
+  actions.push(["Cancel", "", () => {}], ["Save", "primary", () => {
+    const t = title.value.trim(); if (!t || !days.size) { title.focus(); return false; }
+    const rec = { title: t, member: who.value, days: [...days].sort() };
+    commit(s => { const x = s.chores.find(x => x.id === id); if (x) Object.assign(x, rec); else s.chores.push({ id, ...rec, done: {} }); });
+  }]);
+  openModal(ch ? "Edit chore" : "New chore", h("div", {}, field("Chore", title), field("Who", who), field("Repeats on", pick)), actions);
+}
+
+/* lists */
+function renderLists(m) {
+  const lists = STATE.lists;
+  if (!lists.find(l => l.id === UI.listId)) UI.listId = lists[0] && lists[0].id;
+  const cur = lists.find(l => l.id === UI.listId);
+  m.append(h("div", { class: "toolbar" }, h("h2", {}, "Lists"), h("div", { class: "spacer" }), h("button", { class: "btn", onclick: newList }, "+ New list")));
+  const nav = h("div", { class: "list-nav" }, lists.map(l => h("button", { class: "btn" + (l.id === UI.listId ? " on" : ""), onclick: () => { UI.listId = l.id; render(); } },
+    h("span", {}, l.name), h("span", { class: "count" }, l.items.filter(i => !i.done).length))));
+  const main = h("div", { class: "list-main" });
+  if (cur) {
+    const inp = h("input", { placeholder: `Add to ${cur.name}…`, enterkeyhint: "done" });
+    const add = () => {
+      const text = inp.value.trim(); if (!text) return;
+      const id = uid();
+      commit(s => { const l = s.lists.find(l => l.id === cur.id); if (l) l.items.unshift({ id, text, done: false }); });
+      setTimeout(() => { const i = $(".add-row input"); if (i) i.focus(); }, 0);
+    };
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") add(); });
+    const items = [...cur.items.filter(i => !i.done), ...cur.items.filter(i => i.done)];
+    main.append(
+      h("div", { class: "add-row" }, inp, h("button", { class: "btn primary", onclick: add }, "Add")),
+      h("div", { class: "items" }, items.length ? items.map(it => h("div", { class: "item" + (it.done ? " done" : ""), onclick: () => {
+          const target = !it.done;
+          commit(s => { const l = s.lists.find(l => l.id === cur.id); const x = l && l.items.find(i => i.id === it.id); if (x) x.done = target; });
+        } }, h("span", { class: "box" }, it.done ? "✓" : ""), h("span", { class: "txt" }, it.text))) : h("p", { class: "empty" }, "This list is empty.")),
+      h("div", { class: "list-foot" },
+        h("button", { class: "btn", onclick: () => commit(s => { const l = s.lists.find(l => l.id === cur.id); if (l) l.items = l.items.filter(i => !i.done); }) }, "Clear checked"),
+        h("div", { class: "spacer" }),
+        h("button", { class: "btn danger", onclick: () => openModal(`Delete "${cur.name}"?`, h("p", { class: "muted" }, "This removes the list and everything on it."),
+          [["Cancel", "", () => {}], ["Delete", "primary", () => commit(s => { s.lists = s.lists.filter(l => l.id !== cur.id); })]]) }, "Delete list")));
+  } else main.append(h("p", { class: "empty" }, "No lists yet."));
+  m.append(h("div", { class: "lists" }, nav, main));
+}
+function newList() {
+  const name = h("input", { placeholder: "e.g. Costco run" });
+  const id = uid();
+  openModal("New list", field("Name", name), [["Cancel", "", () => {}], ["Create", "primary", () => {
+    const n = name.value.trim(); if (!n) { name.focus(); return false; }
+    UI.listId = id; commit(s => { s.lists.push({ id, name: n, items: [] }); });
+  }]]);
+  setTimeout(() => name.focus(), 50);
+}
+
+/* meals */
+function renderMeals(m) {
+  if (!UI.mealsAnchor) UI.mealsAnchor = startOfWeek(new Date());
+  const s = UI.mealsAnchor, last = addDays(s, 6), o = { month: "short", day: "numeric" }, today = ymd(new Date());
+  m.append(h("div", { class: "toolbar" },
+    h("button", { class: "btn icon", onclick: () => { UI.mealsAnchor = addDays(s, -7); render(); } }, "‹"),
+    h("button", { class: "btn", onclick: () => { UI.mealsAnchor = startOfWeek(new Date()); render(); } }, "This week"),
+    h("button", { class: "btn icon", onclick: () => { UI.mealsAnchor = addDays(s, 7); render(); } }, "›"),
+    h("h2", {}, `Meals · ${s.toLocaleDateString([], o)} – ${last.toLocaleDateString([], o)}`)));
+  const slots = [["breakfast", "Breakfast"], ["lunch", "Lunch"], ["dinner", "Dinner"]];
+  const tbl = h("div", { class: "meals" }, h("div", { class: "meal-row head" }, h("div", {}), slots.map(([, l]) => h("div", {}, l))));
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(s, i), k = ymd(d), row = STATE.meals[k] || {};
+    tbl.append(h("div", { class: "meal-row" + (k === today ? " today" : "") },
+      h("div", { class: "d" }, d.toLocaleDateString([], { weekday: "short" }), h("b", {}, d.getDate())),
+      slots.map(([slot]) => {
+        const inp = h("input", { value: row[slot] || "", placeholder: "—" });
+        inp.addEventListener("change", () => {
+          const v = inp.value.trim();
+          commit(st => {
+            const r = st.meals[k] ||= {};
+            if (v) r[slot] = v; else delete r[slot];
+            if (!Object.keys(r).length) delete st.meals[k];
+          }, { silent: true });
+        });
+        inp.addEventListener("keydown", e => { if (e.key === "Enter") inp.blur(); });
+        return inp;
+      })));
+  }
+  m.append(h("div", { class: "meals-layout" }, tbl, pantryPanel(s)));
+}
+
+/* pantry + meal ideas */
+UI.ideas = { list: [], meal: "dinner", notes: "", busy: false, error: "" };
+function pantryPanel(weekStart) {
+  const panel = h("div", { class: "pantry" });
+  const inp = h("input", { placeholder: "Add food, e.g. chicken, rice, eggs", enterkeyhint: "done" });
+  const add = () => {
+    const items = inp.value.split(/[,\n]/).map(t => t.trim()).filter(Boolean);
+    if (!items.length) return;
+    const have = new Set(STATE.pantry.map(p => p.text.toLowerCase()));
+    const fresh = items.filter(t => { const k = t.toLowerCase(); if (have.has(k)) return false; have.add(k); return true; }).map(text => ({ id: uid(), text }));
+    commit(st => { st.pantry.push(...fresh.filter(f => !st.pantry.some(p => p.text.toLowerCase() === f.text.toLowerCase()))); });
+    setTimeout(() => { const i = $(".pantry .add-row input"); if (i) i.focus(); }, 0);
+  };
+  inp.addEventListener("keydown", e => { if (e.key === "Enter") add(); });
+  panel.append(
+    h("div", { class: "pantry-h" }, h("h3", {}, "In the house"),
+      STATE.pantry.length ? h("button", { class: "linkish", onclick: () => openModal("Clear the pantry list?", h("p", {}, "This removes everything from the list."),
+        [["Cancel", "", () => {}], ["Clear", "primary", () => commit(st => { st.pantry = []; })]]) }, "Clear all") : null),
+    h("p", { class: "muted small" }, "What food do you have? Add a few things at a time, separated by commas."),
+    h("div", { class: "add-row" }, inp, h("button", { class: "btn primary", onclick: add }, "Add")),
+    h("div", { class: "chips-wrap" }, STATE.pantry.length
+      ? STATE.pantry.map(it => h("span", { class: "pchip" }, it.text,
+          h("button", { "aria-label": "Remove " + it.text, onclick: () => commit(st => { st.pantry = st.pantry.filter(x => x.id !== it.id); }) }, "×")))
+      : h("p", { class: "muted small" }, "Nothing added yet.")));
+  if (!CFG.ai_enabled && !CFG.recipes_enabled) {
+    panel.append(h("div", { class: "ideas-off" },
+      h("p", {}, "Want recipes you can make with what's in the house? Turn on the recipe database or Claude meal ideas in Settings."),
+      h("button", { class: "btn", onclick: () => { UI.tab = "settings"; render(); } }, "Open Settings")));
+    return panel;
+  }
+  const I = UI.ideas, empty = !STATE.pantry.length;
+  const notes = CFG.ai_enabled ? h("input", { value: I.notes, placeholder: "Notes for Claude, e.g. quick, kid-friendly, no pork" }) : null;
+  if (notes) notes.addEventListener("input", () => { I.notes = notes.value; });
+  const label = (kind, text) => I.busy === kind ? "Searching…" : text;
+  panel.append(h("div", { class: "ideas" },
+    h("h3", {}, "What can we make?"),
+    seg([["breakfast", "Breakfast"], ["lunch", "Lunch"], ["dinner", "Dinner"]], I.meal, v => { I.meal = v; render(); }),
+    notes,
+    empty ? h("p", { class: "muted small" }, "Add some food above first.") : null,
+    h("div", { class: "idea-btns" },
+      CFG.recipes_enabled ? h("button", { class: "btn primary", disabled: !!I.busy || empty, onclick: () => suggestMeals("recipes") }, label("recipes", "🔎 Find recipes")) : null,
+      CFG.ai_enabled ? h("button", { class: "btn" + (CFG.recipes_enabled ? "" : " primary"), disabled: !!I.busy || empty, onclick: () => suggestMeals("ai") }, label("ai", "✨ Ask Claude")) : null),
+    I.error ? h("p", { class: "status err" }, I.error) : null,
+    I.list.length ? h("p", { class: "muted small" }, I.source === "spoonacular" ? "Recipes from the Spoonacular database" : "Ideas written by Claude") : null,
+    I.list.map(idea => ideaCard(idea, weekStart))));
+  return panel;
+}
+async function suggestMeals(kind) {
+  const I = UI.ideas;
+  I.busy = kind; I.error = ""; render();
+  try {
+    let res;
+    if (API.demo) { await new Promise(r => setTimeout(r, 700)); res = kind === "recipes" ? demoRecipes() : demoIdeas(); }
+    else {
+      const r = await fetch(kind === "recipes" ? "api/recipes" : "api/meal-ideas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ meal: I.meal, notes: I.notes, count: 3 }) });
+      res = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(res.error || "Something went wrong. Try again.");
+    }
+    I.list = res.ideas; I.source = res.source || "claude";
+  } catch (e) { I.error = e.message === "Failed to fetch" ? "Can't reach the Hearth server right now." : e.message; }
+  I.busy = false;
+  if (UI.tab === "meals") render();
+}
+const KIOSK = new URLSearchParams(location.search).has("kiosk");
+function ideaCard(idea, weekStart) {
+  const I = UI.ideas;
+  const days = [...Array(7)].map((_, i) => addDays(weekStart, i));
+  const daySel = h("select", {}, days.map(d => h("option", { value: ymd(d) }, d.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }))));
+  const todayKey = ymd(new Date());
+  if (days.some(d => ymd(d) === todayKey)) daySel.value = todayKey;
+  const meta = [idea.time_minutes ? `⏱ ${idea.time_minutes} min` : null, idea.uses.length ? `Uses: ${idea.uses.join(", ")}` : null].filter(Boolean).join(" · ");
+  const full = idea.ingredients && idea.ingredients.length;
+  return h("div", { class: "idea" },
+    idea.image ? h("img", { class: "idea-img", src: idea.image, alt: "", loading: "lazy", onerror: e => e.target.remove() }) : null,
+    h("div", { class: "idea-name" }, idea.name),
+    idea.description ? h("div", { class: "idea-desc" }, idea.description) : null,
+    meta ? h("div", { class: "muted small" }, meta) : null,
+    idea.missing.length
+      ? h("div", { class: "need" }, h("span", {}, "Need: " + idea.missing.join(", ")),
+          h("button", { class: "linkish", onclick: () => addToGroceries(idea.missing) }, "+ Groceries"))
+      : h("div", { class: "need ok" }, "✓ You have everything"),
+    full ? h("button", { class: "linkish left", onclick: () => showRecipe(idea) }, "See the full recipe")
+         : idea.steps.length ? h("details", { class: "steps" }, h("summary", {}, "How to make it"), h("ol", {}, idea.steps.map(st => h("li", {}, st)))) : null,
+    h("div", { class: "plan-row" }, daySel, h("button", { class: "btn", onclick: () => {
+      const k = daySel.value, slot = I.meal;
+      commit(st => { (st.meals[k] ||= {})[slot] = idea.name; });
+      toast(`Added to ${parseYmd(k).toLocaleDateString([], { weekday: "long" })} ${slot}`);
+    } }, `Plan for ${I.meal}`)));
+}
+function showRecipe(idea) {
+  const missing = new Set(idea.missing.map(m => m.toLowerCase()));
+  const isMissing = line => [...missing].some(m => line.toLowerCase().includes(m));
+  const facts = [idea.time_minutes ? `${idea.time_minutes} minutes` : null, idea.servings ? `serves ${idea.servings}` : null].filter(Boolean).join(" · ");
+  const source = idea.source_url && !KIOSK
+    ? h("a", { href: idea.source_url, target: "_blank", rel: "noopener" }, idea.source_name || "the original recipe")
+    : h("b", {}, idea.source_name || "Spoonacular");
+  openModal(idea.name, h("div", { class: "recipe" },
+    idea.image ? h("img", { class: "recipe-img", src: idea.image, alt: "", onerror: e => e.target.remove() }) : null,
+    facts ? h("p", { class: "muted" }, facts) : null,
+    h("h4", {}, "Ingredients"),
+    h("ul", { class: "ingr" }, idea.ingredients.map(line => h("li", { class: isMissing(line) ? "miss" : "" }, line, isMissing(line) ? h("span", { class: "tag" }, "need") : null))),
+    h("h4", {}, "Steps"),
+    idea.steps.length ? h("ol", { class: "rsteps" }, idea.steps.map(st => h("li", {}, st))) : h("p", { class: "muted" }, "This recipe's steps are on the original site."),
+    h("p", { class: "muted small" }, "Recipe from ", source, KIOSK && idea.source_url ? " (open Hearth on your phone to visit the site)" : "")),
+    [idea.missing.length ? ["+ Missing to groceries", "", () => { addToGroceries(idea.missing); return false; }] : null, ["Close", "primary", () => {}]].filter(Boolean));
+}
+function addToGroceries(items) {
+  const list = STATE.lists.find(l => l.id === "grocery") || STATE.lists[0];
+  if (!list) { toast("Make a list in the Lists tab first"); return; }
+  const adds = items.map(text => ({ id: uid(), text, done: false }));
+  commit(st => {
+    const l = st.lists.find(x => x.id === list.id); if (!l) return;
+    for (const a of adds) if (!l.items.some(i => !i.done && i.text.toLowerCase() === a.text.toLowerCase())) l.items.unshift(a);
+  });
+  toast(`Added to ${list.name}`);
+}
+function demoRecipes() {
+  return { source: "spoonacular", meal: UI.ideas.meal, ideas: [
+    { name: "Easy Chicken Fried Rice", image: "", time_minutes: 30, servings: 4, uses: ["chicken", "rice", "eggs", "frozen peas", "soy sauce"], missing: ["green onions"],
+      ingredients: ["3 cups cooked rice, cold", "2 chicken breasts, diced", "2 eggs, beaten", "1 cup frozen peas", "3 tbsp soy sauce", "2 green onions, sliced", "1 tbsp oil"],
+      steps: ["Heat oil in a large skillet and cook the chicken until golden, about 6 minutes. Set aside.", "Scramble the eggs in the same pan and break them into pieces.", "Add the rice and peas and stir-fry for 4 minutes.", "Return the chicken, add soy sauce and toss. Top with green onions."],
+      source_name: "Example Kitchen (demo)", source_url: "" },
+    { name: "Black Bean & Cheese Quesadillas", image: "", time_minutes: 15, servings: 4, uses: ["tortillas", "cheddar", "black beans"], missing: [],
+      ingredients: ["8 flour tortillas", "1 can black beans, drained", "2 cups shredded cheddar", "salsa, to serve"],
+      steps: ["Mash the beans lightly.", "Spread beans and cheese over half the tortillas and top with the rest.", "Cook in a dry pan 2 to 3 minutes per side until golden.", "Cut into wedges and serve with salsa."],
+      source_name: "Example Kitchen (demo)", source_url: "" }
+  ] };
+}
+function demoIdeas() {
+  return { ideas: [
+    { name: "Chicken fried rice", description: "Crispy rice tossed with chicken, eggs and frozen peas in a quick soy glaze.", time_minutes: 25,
+      uses: ["chicken", "rice", "eggs", "frozen peas", "soy sauce"], missing: ["green onions"],
+      steps: ["Cook the rice (day-old is best).", "Brown diced chicken in oil, then set aside.", "Scramble the eggs in the same pan.", "Add rice, peas and chicken; stir-fry 5 minutes.", "Season with soy sauce and top with green onions."] },
+    { name: "Cheesy chicken quesadillas", description: "Golden tortillas stuffed with chicken, cheese and black beans.", time_minutes: 20,
+      uses: ["chicken", "tortillas", "cheddar", "black beans"], missing: [],
+      steps: ["Shred or dice cooked chicken.", "Fill tortillas with chicken, beans and cheese.", "Toast in a pan 2-3 minutes per side.", "Cut into wedges and serve with salsa."] },
+    { name: "Tomato egg drop soup", description: "A cozy, ten-minute soup with silky eggs and tomatoes.", time_minutes: 15,
+      uses: ["eggs", "canned tomatoes", "chicken broth"], missing: ["cornstarch"],
+      steps: ["Simmer broth and tomatoes 5 minutes.", "Thicken with a little cornstarch slurry.", "Slowly pour in beaten eggs while stirring.", "Season and serve."] }
+  ], meal: UI.ideas.meal };
+}
+
+/* modal */
+function openModal(title, body, actions, id = "modal", onDismiss) {
+  closeModal(id);
+  const ov = h("div", { id, class: "overlay", onclick: x => { if (x.target === ov) { closeModal(id); if (onDismiss) onDismiss(); } } },
+    h("div", { class: "modal" }, h("h3", {}, title), body,
+      h("div", { class: "actions" }, actions.map(([label, cls, fn]) => h("button", { class: "btn " + cls, onclick: () => { if (fn() !== false) closeModal(id); } }, label)))));
+  document.body.append(ov);
+}
+function closeModal(id = "modal") { const m = document.getElementById(id); if (m) m.remove(); }
+
+/* ---------- settings (everything is set up in the app) ---------- */
+const PALETTE = ["#e07a5f", "#3d85c6", "#81b29a", "#f2a541", "#9b5de5", "#e85d9e", "#2a9d8f", "#6c757d", "#d62828", "#4361ee"];
+let PIN = "";
+function applyScale() { document.documentElement.style.zoom = CFG.ui_scale && CFG.ui_scale !== 1 ? CFG.ui_scale : ""; }
+function applyConfig(cfg) {
+  const old = CFG; CFG = cfg;
+  if (!API.demo) cache.set("cfg", cfg);
+  applyScale(); document.title = CFG.title || "Hearth";
+  if (old && (old.latitude !== cfg.latitude || old.longitude !== cfg.longitude || old.temperature_unit !== cfg.temperature_unit)) {
+    WX = null; $("#weather").replaceChildren(); loadWeather();
+  }
+}
+async function settingsCall(method, path, body) {
+  if (API.demo) return demoSettingsCall(method, path, body);
+  if (API.offline) throw new Error("Can't reach the Hearth server right now.");
+  for (let tries = 0; ; tries++) {
+    let r;
+    try {
+      r = await fetch(path, { method, headers: { "Content-Type": "application/json", "X-Hearth-Pin": PIN }, body: body ? JSON.stringify(body) : undefined });
+    } catch { throw new Error("Can't reach the Hearth server right now."); }
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 403 && j.error === "pin") {
+      if (!(await askPin(tries > 0))) throw new Error("cancelled");
+      continue;
+    }
+    if (!r.ok) throw new Error(j.error || "Something went wrong. Try again.");
+    applyConfig(j.config);
+    return j;
+  }
+}
+async function saveSettings(changes) {
+  try { await settingsCall("PUT", "api/settings", changes); render(); return true; }
+  catch (e) { if (e.message !== "cancelled") toast(e.message); return false; }
+}
+function askPin(wrong) {
+  return new Promise(resolve => {
+    const inp = h("input", { type: "password", inputmode: "numeric", autocomplete: "off", placeholder: "PIN" });
+    let done = false;
+    const finish = ok => { if (done) return; done = true; if (ok) PIN = inp.value; closeModal("pinmodal"); resolve(ok); };
+    openModal(wrong ? "That PIN didn't work" : "Enter the PIN", h("div", {},
+      h("p", { class: "muted" }, "Settings are locked. Enter the PIN to make changes."), inp),
+      [["Cancel", "", () => finish(false)], ["Unlock", "primary", () => { if (!inp.value) return false; finish(true); }]],
+      "pinmodal", () => finish(false));
+    inp.addEventListener("keydown", e => { if (e.key === "Enter" && inp.value) finish(true); });
+    setTimeout(() => inp.focus(), 50);
+  });
+}
+function demoSettingsCall(method, path, body) {
+  return new Promise((resolve, reject) => {
+    if (method === "POST") return reject(new Error("The demo can't link real calendars. On your own Hearth server, this checks the link and adds it."));
+    const c = JSON.parse(JSON.stringify(CFG));
+    const m = path.match(/calendars\/(.+)$/);
+    if (m) {
+      if (method === "DELETE") c.calendars = c.calendars.filter(x => x.id !== m[1]);
+      else { const x = c.calendars.find(x => x.id === m[1]); if (x) { x.member = body.member; x.label = body.label || x.label; } }
+    } else {
+      if ("members" in body) {
+        const r = body.renames || {};
+        c.calendars.forEach(x => { x.member = r[x.member] || x.member; if (x.member !== EVERYONE && !body.members.some(p => p.name === x.member)) x.member = EVERYONE; });
+        c.members = body.members;
+      }
+      if ("pin" in body) c.pin = !!body.pin;
+      for (const k of ["setup_done", "title", "week_start", "default_view", "ui_scale", "idle_reset_minutes", "temperature_unit", "night_mode", "latitude", "longitude", "place"])
+        if (k in body) c[k] = body[k];
+      if ("latitude" in body && body.latitude == null) { c.latitude = c.longitude = null; c.place = ""; }
+    }
+    applyConfig(c); resolve({ config: c });
+  });
+}
+const sect = (title, sub, ...body) => h("section", { class: "sect" }, h("h3", {}, title), sub ? h("p", { class: "sub" }, sub) : null, body);
+const errMsg = (el, e) => { if (e.message !== "cancelled") { el.className = "status err"; el.textContent = e.message; } };
+
+function renderSettings(m) {
+  m.append(h("div", { class: "toolbar" }, h("h2", {}, "Settings"), h("div", { class: "spacer" }),
+    CFG.pin ? h("span", { class: "muted small" }, "🔒 Locked with a PIN") : null));
+  const wrap = h("div", { class: "settings" },
+    sect("Family", "Everyone who gets a color on the calendar and a column on the chore chart.", familyEditor()),
+    sect("Linked calendars", "Show events from Google, iPhone or Outlook calendars. They update by themselves every few minutes.", calendarEditor()),
+    sect("Weather", "Shown next to the clock.", weatherEditor()),
+    sect("Display", null, displayEditor()),
+    sect("Recipe database (optional)", "Finds real recipes, with photos and full steps, that use the food in your pantry list. Uses Spoonacular; their free plan covers a handful of searches a day, and Hearth remembers results for a few hours so repeat searches are free.", recipesEditor()),
+    sect("Meal ideas (optional)", "Suggests meals from the food in your pantry list, using Claude. It needs a Claude API key; Anthropic bills the account each time you ask for ideas.", aiEditor()),
+    sect("Lock settings", "Set a PIN so nobody changes these settings by accident from the wall screen. Chores, lists and events still work without it.", pinEditor()));
+  if (!API.demo && location.host) wrap.append(sect("Use it from your phone", null,
+    h("p", {}, "On any phone or computer on your home Wi-Fi, open ", h("b", {}, `http://${location.host}`), " to add groceries, tick off chores or link calendars.")));
+  m.append(wrap);
+}
+function summaryFor(name) {
+  const c = (CFG.calendars || []).filter(x => x.member === name).length;
+  const ch = STATE.chores.filter(x => x.member === name).length;
+  return `${c} linked calendar${c === 1 ? "" : "s"} · ${ch} chore${ch === 1 ? "" : "s"}`;
+}
+function familyEditor() {
+  const box = h("div", {});
+  if (!members().length) box.append(h("p", { class: "muted" }, "No one added yet."));
+  for (const mm of members()) box.append(h("div", { class: "srow" }, avatar(mm.name, true),
+    h("div", { class: "grow" }, h("b", {}, mm.name), h("div", { class: "muted small" }, summaryFor(mm.name))),
+    h("button", { class: "btn", onclick: () => editMember(mm) }, "Edit")));
+  box.append(h("div", { class: "srow-actions" }, h("button", { class: "btn primary", onclick: () => editMember() }, "+ Add a person")));
+  return box;
+}
+function editMember(mm) {
+  const name = h("input", { value: mm ? mm.name : "", placeholder: "Name", maxlength: 24 });
+  let color = mm ? mm.color : PALETTE.find(c => !members().some(x => x.color === c)) || PALETTE[0];
+  const sw = h("div", { class: "swatches" }, PALETTE.map(c => {
+    const b = h("button", { type: "button", class: "swatch" + (c === color ? " on" : ""), style: `background:${c}`, "aria-label": "Color " + c,
+      onclick: () => { color = c; sw.querySelectorAll(".swatch").forEach(x => x.classList.toggle("on", x === b)); } });
+    return b;
+  }));
+  const status = h("div", { class: "status" });
+  const save = () => {
+    const n = name.value.trim();
+    if (!n) { status.className = "status err"; status.textContent = "Type a name."; return false; }
+    const list = members().map(x => ({ ...x })), renames = {};
+    if (mm) { const x = list.find(x => x.name === mm.name); x.name = n; x.color = color; if (n !== mm.name) renames[mm.name] = n; }
+    else list.push({ name: n, color });
+    settingsCall("PUT", "api/settings", { members: list, renames })
+      .then(() => { closeModal(); if (Object.keys(renames).length) renameInState(renames); else render(); })
+      .catch(e => errMsg(status, e));
+    return false;
+  };
+  name.addEventListener("keydown", e => { if (e.key === "Enter") save(); });
+  const actions = [];
+  if (mm) actions.push(["Remove", "danger", () => { setTimeout(() => confirmRemoveMember(mm), 0); }]);
+  actions.push(["Cancel", "", () => {}], ["Save", "primary", save]);
+  openModal(mm ? `Edit ${mm.name}` : "Add a person", h("div", {}, field("Name", name), field("Color", sw), status), actions);
+  if (!mm) setTimeout(() => name.focus(), 50);
+}
+function renameInState(map) {
+  commit(s => {
+    for (const c of s.chores) if (map[c.member]) c.member = map[c.member];
+    for (const e of s.events) if (map[e.member]) e.member = map[e.member];
+  });
+}
+function confirmRemoveMember(mm) {
+  openModal(`Remove ${mm.name}?`, h("p", {}, "Their chores and events will be moved to “Everyone”, and so will any calendars linked to them."),
+    [["Cancel", "", () => {}], ["Remove", "primary", () => {
+      settingsCall("PUT", "api/settings", { members: members().filter(x => x.name !== mm.name) })
+        .then(() => renameInState({ [mm.name]: EVERYONE }))
+        .catch(e => { if (e.message !== "cancelled") toast(e.message); });
+    }]]);
+}
+function calendarEditor() {
+  const box = h("div", {}), cals = CFG.calendars || [];
+  if (!cals.length) box.append(h("p", { class: "muted" }, "No calendars linked yet."));
+  for (const c of cals) box.append(h("div", { class: "srow" }, avatar(c.member),
+    h("div", { class: "grow" }, h("b", {}, c.label), h("div", { class: "muted small" }, `${c.member} · ${c.hint}`)),
+    h("button", { class: "btn", onclick: () => editCalendar(c) }, "Edit")));
+  box.append(h("div", { class: "srow-actions" }, h("button", { class: "btn primary", onclick: () => addCalendar() }, "+ Link a calendar")));
+  return box;
+}
+function addCalendar() {
+  const who = memberSelect((members()[0] || {}).name || EVERYONE);
+  const url = h("input", { type: "url", placeholder: "Paste the calendar link here", autocomplete: "off", autocapitalize: "off", spellcheck: "false" });
+  const label = h("input", { placeholder: "e.g. Work, School, Soccer (optional)", maxlength: 40 });
+  const status = h("div", { class: "status" });
+  const help = h("details", { class: "help" }, h("summary", {}, "Where do I find the link?"), h("ul", {},
+    h("li", {}, h("b", {}, "Google Calendar: "), "on a computer, go to calendar.google.com, open ⚙ Settings, click the calendar's name on the left, scroll to “Integrate calendar” and copy the “Secret address in iCal format”."),
+    h("li", {}, h("b", {}, "iPhone / iCloud: "), "in the Calendar app, tap Calendars, tap ⓘ next to the calendar, turn on “Public Calendar”, then tap Share Link and Copy."),
+    h("li", {}, h("b", {}, "Outlook: "), "on outlook.com, open ⚙ Settings → Calendar → Shared calendars → Publish a calendar, choose the calendar and “Can view all details”, click Publish and copy the ICS link.")));
+  const tip = !API.demo && location.host ? h("p", { class: "muted small" }, `Tip: links are easiest to paste from your phone or computer. Open http://${location.host} there.`) : null;
+  let busy = false;
+  openModal("Link a calendar", h("div", {}, field("Whose calendar is it?", who), field("Calendar link", url), help, field("Name", label), tip, status),
+    [["Cancel", "", () => {}], ["Link calendar", "primary", () => {
+      if (busy) return false;
+      if (!url.value.trim()) { status.className = "status err"; status.textContent = "Paste the calendar link first."; return false; }
+      busy = true; status.className = "status"; status.textContent = "Checking the link…";
+      settingsCall("POST", "api/calendars", { member: who.value, url: url.value.trim(), label: label.value })
+        .then(j => { closeModal(); toast(`Linked “${j.calendar.label}” (${j.calendar.events} events)`); render(); loadFeeds(); })
+        .catch(e => { busy = false; if (e.message === "cancelled") status.textContent = ""; else errMsg(status, e); });
+      return false;
+    }]]);
+  setTimeout(() => url.focus(), 50);
+}
+function editCalendar(c) {
+  const who = memberSelect(c.member), label = h("input", { value: c.label, maxlength: 40 }), status = h("div", { class: "status" });
+  let armed = false;
+  const done = () => { closeModal(); render(); loadFeeds(); };
+  openModal("Edit calendar", h("div", {}, h("p", { class: "muted small" }, c.hint), field("Whose calendar", who), field("Name", label), status), [
+    ["Unlink", "danger", () => {
+      if (!armed) { armed = true; status.className = "status err"; status.textContent = "Tap Unlink again to remove it from Hearth. Nothing is deleted from Google, iCloud or Outlook."; return false; }
+      settingsCall("DELETE", `api/calendars/${c.id}`).then(done).catch(e => errMsg(status, e));
+      return false;
+    }],
+    ["Cancel", "", () => {}],
+    ["Save", "primary", () => { settingsCall("PUT", `api/calendars/${c.id}`, { member: who.value, label: label.value }).then(done).catch(e => errMsg(status, e)); return false; }]]);
+}
+function weatherEditor() {
+  const box = h("div", {});
+  box.append(CFG.latitude != null
+    ? h("div", { class: "srow" }, h("div", { class: "grow" }, h("b", {}, CFG.place || `${(+CFG.latitude).toFixed(2)}, ${(+CFG.longitude).toFixed(2)}`), h("div", { class: "muted small" }, "Weather location")),
+        h("button", { class: "btn", onclick: () => saveSettings({ latitude: null, longitude: null }) }, "Turn off"))
+    : h("p", { class: "muted" }, "No location set, so the weather is hidden."));
+  const q = h("input", { placeholder: "Search for your town or city" }), results = h("div", { class: "results" });
+  const go = async () => {
+    const t = q.value.trim(); if (!t) return;
+    results.replaceChildren(h("p", { class: "muted small" }, "Searching…"));
+    try {
+      const j = await (await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(t)}&count=5&language=en&format=json`)).json();
+      const list = j.results || [];
+      results.replaceChildren(...(list.length ? list.map(r => {
+        const place = [r.name, r.admin1, r.country_code].filter(Boolean).join(", ");
+        return h("button", { class: "btn result", onclick: () => saveSettings({ latitude: r.latitude, longitude: r.longitude, place }) }, place);
+      }) : [h("p", { class: "muted small" }, "No places found. Try just the city name.")]));
+    } catch { results.replaceChildren(h("p", { class: "status err" }, "Couldn't search right now. Check the internet connection.")); }
+  };
+  q.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+  box.append(h("div", { class: "add-row" }, q, h("button", { class: "btn", onclick: go }, "Search")), results,
+    h("div", { class: "srow" }, h("div", { class: "grow" }, "Temperature"),
+      seg([["fahrenheit", "°F"], ["celsius", "°C"]], CFG.temperature_unit || "fahrenheit", v => saveSettings({ temperature_unit: v }))));
+  return box;
+}
+function displayEditor() {
+  const title = h("input", { value: CFG.title || "", maxlength: 60 });
+  title.addEventListener("change", () => saveSettings({ title: title.value }));
+  const nm = CFG.night_mode;
+  const hourSel = (v, on) => {
+    const s = h("select", {}, [...Array(24)].map((_, i) => h("option", { value: i }, new Date(2000, 0, 1, i).toLocaleTimeString([], { hour: "numeric" }))));
+    s.value = v; s.addEventListener("change", () => on(+s.value)); return s;
+  };
+  return h("div", { class: "sgrid" },
+    h("label", {}, "Calendar name"), title,
+    h("label", {}, "Text size"), seg([[0.9, "Small"], [1, "Normal"], [1.25, "Large"], [1.5, "Huge"]], CFG.ui_scale || 1, v => saveSettings({ ui_scale: v })),
+    h("label", {}, "Week starts on"), seg([[0, "Sunday"], [1, "Monday"]], CFG.week_start || 0, v => saveSettings({ week_start: v })),
+    h("label", {}, "Start screen"), seg([["week", "Week"], ["month", "Month"], ["agenda", "Agenda"]], CFG.default_view || "week", v => saveSettings({ default_view: v })),
+    h("label", {}, "Check calendars every"), seg([[2, "2 min"], [5, "5 min"], [10, "10 min"], [30, "30 min"]], CFG.refresh_minutes || 10, v => saveSettings({ refresh_minutes: v })),
+    h("label", {}, "Go back to today after"), seg([[1, "1 min"], [3, "3 min"], [10, "10 min"]], CFG.idle_reset_minutes || 3, v => saveSettings({ idle_reset_minutes: v })),
+    h("label", {}, "Dark screen at night"), h("div", {},
+      seg([["on", "On"], ["off", "Off"]], nm ? "on" : "off", v => saveSettings({ night_mode: v === "on" ? { start: 22, end: 6 } : null })),
+      nm ? h("div", { class: "row", style: "margin-top:10px" },
+        field("From", hourSel(nm.start, v => saveSettings({ night_mode: { start: v, end: nm.end } }))),
+        field("Until", hourSel(nm.end, v => saveSettings({ night_mode: { start: nm.start, end: v } })))) : null));
+}
+function recipesEditor() {
+  if (CFG.recipes_enabled) return h("div", { class: "srow" },
+    h("div", { class: "grow" }, h("b", {}, "Turned on"), h("div", { class: "muted small" }, `Spoonacular key ${CFG.recipes_key_hint}`)),
+    h("button", { class: "btn danger", onclick: () => saveSettings({ spoonacular_api_key: "" }).then(ok => { if (ok) toast("Recipe database turned off"); }) }, "Turn off"));
+  const key = h("input", { type: "password", placeholder: "Paste your Spoonacular API key", autocomplete: "off" });
+  const status = h("div", { class: "status" });
+  let busy = false;
+  const go = () => {
+    if (busy || !key.value.trim()) return;
+    busy = true; status.className = "status"; status.textContent = "Checking the key\u2026";
+    settingsCall("PUT", "api/settings", { spoonacular_api_key: key.value.trim() })
+      .then(() => { toast("Recipe database turned on"); render(); })
+      .catch(e => { busy = false; errMsg(status, e); });
+  };
+  key.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+  return h("div", {},
+    h("div", { class: "add-row" }, key, h("button", { class: "btn primary", onclick: go }, "Turn on")), status,
+    h("details", { class: "help" }, h("summary", {}, "How do I get a key?"), h("ol", {},
+      h("li", {}, "On a computer, go to spoonacular.com/food-api and sign up for the free plan (no credit card)."),
+      h("li", {}, "Open the Console, then Profile, where your API key is shown."),
+      h("li", {}, "Copy it and paste it here."))));
+}
+function aiEditor() {
+  if (CFG.ai_enabled) return h("div", {},
+    h("div", { class: "srow" }, h("div", { class: "grow" }, h("b", {}, "Turned on"), h("div", { class: "muted small" }, `API key ${CFG.ai_key_hint}`)),
+      h("button", { class: "btn danger", onclick: () => saveSettings({ anthropic_api_key: "" }).then(ok => { if (ok) toast("Meal ideas turned off"); }) }, "Turn off")),
+    h("div", { class: "srow" }, h("div", { class: "grow" }, "Model"),
+      seg([["claude-haiku-5-5", "Fast & cheap"], ["claude-sonnet-5-5", "Smarter"]], CFG.ai_model, v => saveSettings({ ai_model: v }))));
+  const key = h("input", { type: "password", placeholder: "Paste your Claude API key (starts with sk-ant-)", autocomplete: "off" });
+  const status = h("div", { class: "status" });
+  let busy = false;
+  const go = () => {
+    if (busy || !key.value.trim()) return;
+    busy = true; status.className = "status"; status.textContent = "Checking the key\u2026";
+    settingsCall("PUT", "api/settings", { anthropic_api_key: key.value.trim() })
+      .then(() => { toast("Meal ideas turned on"); render(); })
+      .catch(e => { busy = false; errMsg(status, e); });
+  };
+  key.addEventListener("keydown", e => { if (e.key === "Enter") go(); });
+  return h("div", {},
+    h("div", { class: "add-row" }, key, h("button", { class: "btn primary", onclick: go }, "Turn on")), status,
+    h("details", { class: "help" }, h("summary", {}, "How do I get a key?"), h("ol", {},
+      h("li", {}, "On a computer, sign in to the Claude Console at platform.claude.com (this is separate from a Claude.ai subscription)."),
+      h("li", {}, "Add a little prepaid credit under Billing."),
+      h("li", {}, "Open API Keys, create a key named \u201cHearth\u201d, copy it and paste it here."))));
+}
+function pinEditor() {
+  if (CFG.pin) return h("div", { class: "row-btns" },
+    h("button", { class: "btn", onclick: setPin }, "Change PIN"),
+    h("button", { class: "btn danger", onclick: () => saveSettings({ pin: "" }).then(ok => { if (ok) toast("PIN removed"); }) }, "Remove PIN"));
+  return h("button", { class: "btn", onclick: setPin }, "Set a PIN");
+}
+function setPin() {
+  const a = h("input", { type: "password", inputmode: "numeric", placeholder: "4 to 8 digits" });
+  const b = h("input", { type: "password", inputmode: "numeric", placeholder: "Type it again" });
+  const status = h("div", { class: "status" });
+  openModal("Set a PIN", h("div", {}, field("New PIN", a), field("Confirm PIN", b), status), [["Cancel", "", () => {}], ["Save", "primary", () => {
+    status.className = "status err";
+    if (!/^\d{4,8}$/.test(a.value)) { status.textContent = "Use 4 to 8 digits."; return false; }
+    if (a.value !== b.value) { status.textContent = "The two PINs don't match."; return false; }
+    const p = a.value;
+    settingsCall("PUT", "api/settings", { pin: p }).then(() => { PIN = p; closeModal(); toast("Settings are now locked"); render(); }).catch(e => errMsg(status, e));
+    return false;
+  }]]);
+}
+
+/* first-time setup */
+function renderSetup(m) {
+  const step = UI.setupStep || 0, go = n => { UI.setupStep = n; render(); };
+  const dots = h("div", { class: "dots" }, [0, 1, 2, 3].map(i => h("i", { class: i === step ? "on" : "" })));
+  const nav = (back, next, label, ok = true) => h("div", { class: "actions" },
+    back ? h("button", { class: "btn", onclick: back }, "Back") : null, h("div", { class: "spacer" }),
+    h("button", { class: "btn primary", disabled: !ok, onclick: next }, label));
+  const card = h("div", { class: "setup" }, dots);
+  if (step === 0) {
+    const t = h("input", { value: CFG.title && CFG.title !== "Our Family" ? CFG.title : "", placeholder: "e.g. The Parkers" });
+    card.append(h("h2", {}, "Welcome to Hearth"),
+      h("p", { class: "lead" }, "Let's set up your family calendar. It takes about two minutes, and you can change anything later in Settings."),
+      field("What should we call your calendar?", t),
+      nav(null, async () => { if (await saveSettings({ title: t.value.trim() || "Our Family" })) go(1); }, "Let's go"));
+  } else if (step === 1) {
+    card.append(h("h2", {}, "Who lives here?"),
+      h("p", { class: "lead" }, "Add each person who should have their own color on the calendar and their own chore list."),
+      familyEditor(), nav(() => go(0), () => go(2), "Next", members().length > 0));
+  } else if (step === 2) {
+    card.append(h("h2", {}, "Link your calendars"),
+      h("p", { class: "lead" }, "Optional. Bring in events from Google, iPhone or Outlook calendars, or skip this and just add events on the screen."),
+      calendarEditor(), nav(() => go(1), () => go(3), (CFG.calendars || []).length ? "Next" : "Skip for now"));
+  } else {
+    card.append(h("h2", {}, "Where do you live?"),
+      h("p", { class: "lead" }, "Optional. This is only used to show the weather."),
+      weatherEditor(), nav(() => go(2), async () => {
+        if (await saveSettings({ setup_done: true })) { UI.tab = "calendar"; UI.setupStep = 0; render(); loadFeeds(); toast("All set!"); }
+      }, "Finish"));
+  }
+  m.append(h("div", { class: "setup-wrap" }, card));
+}
+
+/* ---------- background loops ---------- */
+const homeView = () => innerWidth < 760 ? "agenda" : (CFG.default_view || "week");
+const isTyping = () => { const a = document.activeElement; return !!a && (a.tagName === "INPUT" || a.tagName === "SELECT"); };
+async function poll() {
+  if (API.offline) {  // reload as soon as the server is back
+    try { if ((await fetch("api/health", { cache: "no-store" })).ok) location.reload(); } catch {}
+    return;
+  }
+  if (API.demo || saving || $("#modal") || $("#pinmodal")) return;
+  try {  // pick up settings changed from another screen or phone
+    const r = await fetch("api/config", { cache: "no-store" });
+    if (r.ok) {
+      const c = await r.json();
+      if (JSON.stringify(c) !== JSON.stringify(CFG) && !isTyping()) { applyConfig(c); render(); loadFeeds(); }
+    }
+  } catch {}
+  try {
+    const s = await API.state();
+    if (s.rev !== STATE.rev && !isTyping()) { STATE = s; normalizeState(); render(); }
+  } catch {}
+}
+function housekeeping() {
+  if (ymd(new Date()) !== renderedDay && !isTyping()) { UI.mealsAnchor = null; render(); loadFeeds(); }
+  const idleMs = (CFG.idle_reset_minutes || 3) * 60000, home = homeView();
+  const atHome = UI.tab === "calendar" && UI.cal === home && ymd(UI.anchor) === ymd(new Date());
+  if (Date.now() - lastTouch > idleMs) {
+    PIN = "";  // re-lock settings when nobody is using the screen
+    if (!atHome && UI.tab !== "setup") {
+      closeModal(); closeModal("pinmodal"); if (document.activeElement) document.activeElement.blur();
+      UI.tab = "calendar"; UI.cal = home; UI.anchor = startOfDay(new Date()); UI.mealsAnchor = null;
+      refreshCal();
+    }
+  }
+}
+
+(async function init() {
+  await API.init();
+  document.title = CFG.title || "Hearth";
+  applyScale();
+  if (API.demo) { $("#banner").hidden = false; WX = { t: 64, code: 1, hi: 68, lo: 52 }; renderWeather(); }
+  try { STATE = await API.state(); }
+  catch { API.offline = true; STATE = cache.get("state") || { rev: -1 }; }
+  if (API.offline) {
+    const b = $("#banner"); b.hidden = false;
+    b.textContent = "Can't reach the Hearth server. Showing the last saved copy; it will reconnect automatically.";
+  }
+  normalizeState();
+  UI.cal = homeView();
+  if (!API.demo && !API.offline && !CFG.setup_done) UI.tab = "setup";
+  document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => { UI.tab = b.dataset.tab; render(); if (UI.tab === "calendar") loadFeeds(); }));
+  document.addEventListener("pointerdown", () => { lastTouch = Date.now(); }, true);
+  $("#night").addEventListener("click", () => { wakeUntil = Date.now() + 2 * 60000; checkNight(); });
+  render(); renderClock(); loadFeeds(); loadWeather();
+  setInterval(renderClock, 1000);
+  setInterval(poll, 20000);
+  setInterval(loadFeeds, 60000);  // cheap: the server only re-downloads calendars as often as the setting allows
+  setInterval(loadWeather, 30 * 60000);
+  setInterval(housekeeping, 30000);
+})();
+</script>
+</body>
+</html>

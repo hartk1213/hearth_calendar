@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>hearth</Name>
+  <Repository>ghcr.io/hartk1213/hearth:latest</Repository>
+  <Registry>https://github.com/hartk1213/hearth/pkgs/container/hearth</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/hartk1213/hearth/issues</Support>
+  <Project>https://github.com/hartk1213/hearth</Project>
+  <Overview>Hearth is a DIY family wall calendar for a touchscreen: shared calendar with Google/iCloud/Outlook calendars, chore chart, lists, meal planner and pantry recipes. Everything is set up inside the app. Data is stored in MariaDB/MySQL, or in the Data folder if no database is set.</Overview>
+  <Category>Productivity: HomeAutomation:</Category>
+  <WebUI>http://[IP]:[PORT:8080]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/hartk1213/hearth/main/unraid/hearth.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/hartk1213/hearth/main/docs/icon.png</Icon>
+  <ExtraParams>--user 99:100</ExtraParams>
+  <Config Name="Web page port" Target="8080" Default="8095" Mode="tcp" Description="Open Hearth at http://your-server:this-port. Change it if another app already uses it." Type="Port" Display="always" Required="true" Mask="false">8095</Config>
+  <Config Name="Time zone" Target="TZ" Default="America/Los_Angeles" Mode="" Description="So calendar times are right, e.g. America/New_York, Europe/London." Type="Variable" Display="always" Required="true" Mask="false">America/Los_Angeles</Config>
+  <Config Name="Database host" Target="DB_HOST" Default="" Mode="" Description="Your Unraid server's IP if you use MariaDB (e.g. 192.168.1.10). Leave empty to store data in the Data folder instead." Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Database password for Hearth" Target="DB_PASSWORD" Default="" Mode="" Description="Make up a password. Hearth creates its own database user with it." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="MariaDB root password (first start only)" Target="DB_ROOT_PASSWORD" Default="" Mode="" Description="Lets Hearth create its database on the first start. Clear this field once the log says 'created database'." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Database port" Target="DB_PORT" Default="3306" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">3306</Config>
+  <Config Name="Database name" Target="DB_NAME" Default="hearth" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">hearth</Config>
+  <Config Name="Database user" Target="DB_USER" Default="hearth" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">hearth</Config>
+  <Config Name="Data" Target="/config" Default="/mnt/user/appdata/hearth" Mode="rw" Description="Only used when no database is set." Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/hearth</Config>
+</Container>
