@@ -6,7 +6,7 @@ linked calendars, settings, chores, lists, meals, events) in MariaDB/MySQL
 when DB_HOST is set, otherwise in JSON files. All setup happens in the app;
 there is no config file to edit.
 """
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 import copy
 import datetime as dt

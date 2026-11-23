@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1 (2026-11-22)
+
+- Screens keep their scroll position when something changes (adding stars, changing a setting, ticking a chore, or an update from another device) instead of jumping back to the top.
+
 ## 1.2.0 (2026-11-22)
 
 - **Sign-in for away from home:** an optional family password, set in Settings. Choose "Away from home" (the default), "Every device" or "Off". Devices stay signed in for 6 months. Settings shows the signed-in devices and can sign out the others.

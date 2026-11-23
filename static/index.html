@@ -599,11 +599,37 @@ function checkNight() {
 }
 
 /* ---------- render ---------- */
+/* Redrawing replaces the screen's contents, which would jump every scrolled
+   area back to the top. Remember where each one was and put it back, as long
+   as we're redrawing the same screen (switching tabs still starts at the top). */
+let lastScreen = "";
+function saveScroll(root) {
+  const areas = [];
+  for (const el of root.querySelectorAll("*")) {
+    if (el.scrollTop > 0 || el.scrollLeft > 0) {
+      const sel = el.classList.length ? "." + CSS.escape(el.classList[0]) : el.tagName.toLowerCase();
+      areas.push([sel, [...root.querySelectorAll(sel)].indexOf(el), el.scrollTop, el.scrollLeft]);
+    }
+  }
+  return { areas, page: [window.scrollX, window.scrollY] };
+}
+function restoreScroll(root, saved) {
+  for (const [sel, idx, top, left] of saved.areas) {
+    const el = root.querySelectorAll(sel)[idx];
+    if (el) { el.scrollTop = top; el.scrollLeft = left; }
+  }
+  window.scrollTo(saved.page[0], saved.page[1]);
+}
 function render() {
   renderedDay = ymd(new Date());
   document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === UI.tab));
-  const m = $("main"); m.replaceChildren();
+  const m = $("main");
+  const screen = [UI.tab, UI.cal, UI.choresView, UI.listId, UI.setupStep].join("|");
+  const saved = screen === lastScreen ? saveScroll(m) : null;
+  lastScreen = screen;
+  m.replaceChildren();
   ({ calendar: renderCalendar, chores: renderChores, lists: renderLists, meals: renderMeals, settings: renderSettings, setup: renderSetup })[UI.tab](m);
+  if (saved) restoreScroll(m, saved);
 }
 
 /* calendar */
