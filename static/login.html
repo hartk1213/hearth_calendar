@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Sign in · Hearth</title>
+<link rel="icon" href="icon.png">
+<meta name="theme-color" content="#f7f3ec">
+<style>
+:root{--bg:#f7f3ec;--card:#fff;--ink:#2b2622;--muted:#8a8178;--line:#ebe4d9;--accent:#d9693b}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+body{display:grid;place-items:center;min-height:100vh;padding:20px}
+.card{background:var(--card);border-radius:22px;padding:32px 28px;width:min(400px,100%);box-shadow:0 10px 40px rgba(0,0,0,.07);text-align:center}
+img{width:72px;height:72px;border-radius:18px}
+h1{font-size:28px;margin:14px 0 4px}
+p{color:var(--muted);margin:0 0 22px;font-size:16px;line-height:1.4}
+form{display:flex;flex-direction:column;gap:12px;text-align:left}
+label{font-size:14px;font-weight:650;color:var(--muted)}
+input{font:inherit;font-size:18px;padding:12px 14px;border:1.5px solid var(--line);border-radius:12px;width:100%;min-height:50px}
+input:focus{outline:none;border-color:var(--accent)}
+button{font:inherit;font-size:18px;font-weight:650;border:0;border-radius:12px;background:var(--accent);color:#fff;min-height:52px;cursor:pointer}
+button:disabled{opacity:.6}
+.err{color:#c0392b;font-size:15px;min-height:1.2em;text-align:center;margin:0}
+small{display:block;margin-top:18px;color:var(--muted);font-size:13px;line-height:1.4}
+</style>
+</head>
+<body>
+<main class="card">
+  <img src="icon.png" alt="">
+  <h1>Hearth</h1>
+  <p>Enter your family password to see the calendar.</p>
+  <form id="f">
+    <label for="pw">Family password</label>
+    <input id="pw" type="password" autocomplete="current-password" autofocus required>
+    <p class="err" id="err" role="alert"></p>
+    <button id="go" type="submit">Sign in</button>
+  </form>
+  <small>You'll stay signed in on this device. Ask whoever set up Hearth if you don't know the password.</small>
+</main>
+<script>
+{
+  const f = document.getElementById("f"), pw = document.getElementById("pw"), err = document.getElementById("err"), go = document.getElementById("go");
+  f.addEventListener("submit", async e => {
+    e.preventDefault();
+    err.textContent = ""; go.disabled = true; go.textContent = "Signing in…";
+    try {
+      const r = await fetch("api/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw.value }) });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) { location.replace(location.pathname.replace(/login\.html$/, "") + location.search); return; }
+      err.textContent = j.error || "Couldn't sign in. Try again.";
+    } catch { err.textContent = "Can't reach Hearth right now. Check your connection."; }
+    go.disabled = false; go.textContent = "Sign in"; pw.select();
+  });
+}
+</script>
+</body>
+</html>

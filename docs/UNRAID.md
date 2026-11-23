@@ -56,6 +56,12 @@ When it prints **Hearth database is ready**, clear the root password field in He
 
 Open `http://<your-server-ip>:8095` (or click **WebUI** on the Hearth icon). A short setup walks you through naming your calendar, adding your family, linking calendars and choosing your town for the weather.
 
+## Using Hearth away from home
+
+If you reach Hearth through your own web address (for example with Nginx Proxy Manager), first turn on **Settings → Sign-in for away from home** and set a family password. Phones outside your home Wi-Fi then see a sign-in page once; the wall screen and devices at home aren't affected.
+
+In Nginx Proxy Manager, point the proxy host at `http://<server-ip>:8095` (your Web page port). NPM already sends the visitor's real address, so Hearth can tell home from away.
+
 ## Updating
 
 When the Docker tab shows **apply update** next to Hearth, click it. Your data is kept.

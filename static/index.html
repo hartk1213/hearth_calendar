@@ -414,6 +414,20 @@ function demoState() {
 }
 
 /* ---------- API (falls back to demo mode) ---------- */
+/* If sign-in is turned on and this device isn't signed in (or was signed
+   out), the server answers 401: forget the local copy and show the sign-in page. */
+{
+  const realFetch = window.fetch.bind(window);
+  window.fetch = async (...args) => {
+    const r = await realFetch(...args);
+    if (r.status === 401 && typeof args[0] === "string" && args[0].startsWith("api/") && args[0] !== "api/login") {
+      try { for (const k of Object.keys(localStorage)) if (k.startsWith("hearth-")) localStorage.removeItem(k); } catch {}
+      location.reload();
+      return new Promise(() => {});
+    }
+    return r;
+  };
+}
 /* The screen keeps a copy of the last good config, state and events so it
    keeps showing something useful if the server or database is down. */
 const cache = {
@@ -1339,7 +1353,8 @@ function renderSettings(m) {
     sect("Display", null, displayEditor()),
     sect("Recipe database (optional)", "Finds real recipes, with photos and full steps, that use the food in your pantry list. Uses Spoonacular; their free plan covers a handful of searches a day, and Hearth remembers results for a few hours so repeat searches are free.", recipesEditor()),
     sect("Claude AI (optional)", "Adds \ud83d\udcf7 Import on the calendar (turn photos of flyers, PDFs and emails into events) and meal ideas from your pantry. It needs a Claude API key; Anthropic bills the account each time you use it.", aiEditor()),
-    sect("Lock settings", "Set a PIN so nobody changes these settings by accident from the wall screen. Chores, lists and events still work without it.", pinEditor()));
+    sect("Lock settings", "Set a PIN so nobody changes these settings by accident from the wall screen. Chores, lists and events still work without it.", pinEditor()),
+    API.demo ? null : sect("Sign-in for away from home", "Ask for a family password when Hearth is opened from outside your home Wi-Fi, for example through your own web address. The wall screen and devices at home don't need it.", authEditor()));
   if (!API.demo && location.host) wrap.append(sect("Use it from your phone", null,
     h("p", {}, "On any phone or computer on your home Wi-Fi, open ", h("b", {}, `http://${location.host}`), " to add groceries, tick off chores or link calendars.")));
   m.append(wrap);
@@ -1535,6 +1550,53 @@ function aiEditor() {
       h("li", {}, "On a computer, sign in to the Claude Console at platform.claude.com (this is separate from a Claude.ai subscription)."),
       h("li", {}, "Add a little prepaid credit under Billing."),
       h("li", {}, "Open API Keys, create a key named \u201cHearth\u201d, copy it and paste it here."))));
+}
+function authEditor() {
+  const where = h("p", { class: "muted small" }, CFG.at_home
+    ? "\ud83c\udfe0 This device is on your home network."
+    : "\ud83c\udf0d This device is connecting from outside your home network.");
+  const signOutHere = CFG.signed_in ? h("button", { class: "btn", onclick: async () => {
+      try { await fetch("api/logout", { method: "POST" }); } catch {}
+      try { for (const k of Object.keys(localStorage)) if (k.startsWith("hearth-")) localStorage.removeItem(k); } catch {}
+      location.reload();
+    } }, "Sign out of this device") : null;
+  if (!CFG.auth_set) return h("div", {}, where,
+    h("button", { class: "btn primary", onclick: () => setFamilyPassword(true) }, "Set a family password"));
+  const sessions = CFG.sessions || [];
+  return h("div", {}, where,
+    h("div", { class: "srow" }, h("div", { class: "grow" }, "Ask for the password on"),
+      seg([["away", "Away from home"], ["always", "Every device"], ["off", "Off"]], CFG.auth_mode, v => {
+        if (v === "always") openModal("Ask on every device?", h("p", {}, "The wall screen and phones at home will also need the password, once each. Phones and screens stay signed in."),
+          [["Cancel", "", () => {}], ["Yes", "primary", () => { saveSettings({ auth_mode: v }); }]]);
+        else saveSettings({ auth_mode: v });
+      })),
+    h("div", { class: "srow" }, h("div", { class: "grow" }, h("b", {}, `${sessions.length} signed-in device${sessions.length === 1 ? "" : "s"}`),
+      h("div", { class: "muted small" }, sessions.slice(-4).map(x => `${x.label} (since ${parseYmd(x.created).toLocaleDateString([], { month: "short", day: "numeric" })})`).join(", ") || "None yet")),
+      sessions.length ? h("button", { class: "btn", onclick: () => saveSettings({ sign_out_all: true }).then(ok => { if (ok) toast("Other devices signed out"); }) }, "Sign out others") : null),
+    h("div", { class: "row-btns", style: "margin-top:12px" },
+      h("button", { class: "btn", onclick: () => setFamilyPassword(false) }, "Change password"), signOutHere));
+}
+function setFamilyPassword(first) {
+  const a = h("input", { type: "password", autocomplete: "new-password", placeholder: "At least 6 characters" });
+  const b = h("input", { type: "password", autocomplete: "new-password", placeholder: "Type it again" });
+  const status = h("div", { class: "status" });
+  openModal(first ? "Set a family password" : "Change the family password", h("div", {},
+    h("p", { class: "muted" }, first
+      ? "Anyone opening Hearth from outside your home Wi-Fi will need this password. Pick something the family can remember but strangers can't guess."
+      : "Every other signed-in device will need the new password."),
+    field("Password", a), field("Again", b), status),
+    [["Cancel", "", () => {}], ["Save", "primary", () => {
+      status.className = "status err";
+      if (a.value.length < 6) { status.textContent = "Use at least 6 characters."; return false; }
+      if (a.value !== b.value) { status.textContent = "The two passwords don't match."; return false; }
+      const changes = { auth_password: a.value };
+      if (first) changes.auth_mode = "away";
+      settingsCall("PUT", "api/settings", changes)
+        .then(() => { closeModal(); toast(first ? "Sign-in is on for devices away from home" : "Password changed"); render(); })
+        .catch(e => errMsg(status, e));
+      return false;
+    }]]);
+  setTimeout(() => a.focus(), 50);
 }
 function pinEditor() {
   if (CFG.pin) return h("div", { class: "row-btns" },

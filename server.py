@@ -6,11 +6,13 @@ linked calendars, settings, chores, lists, meals, events) in MariaDB/MySQL
 when DB_HOST is set, otherwise in JSON files. All setup happens in the app;
 there is no config file to edit.
 """
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 import copy
 import datetime as dt
 import hashlib
+import http.cookies
+import ipaddress
 import json
 import os
 import re
@@ -78,6 +80,9 @@ DEFAULT_SETTINGS = {
     "anthropic_api_key": "",
     "ai_model": "claude-haiku-5-5",
     "spoonacular_api_key": "",
+    "auth_mode": "off",      # off | away (only when not on the home network) | always
+    "auth_hash": "",
+    "sessions": [],          # signed-in devices: {id, hash, created, label}
 }
 SPOON_URL = os.environ.get("HEARTH_SPOON_URL", "https://api.spoonacular.com")  # override only for testing
 recipe_cache = {}  # (meal, pantry) -> (fetched_at, result); saves the daily quota
@@ -327,6 +332,10 @@ def public_config():
     cfg["ai_enabled"] = bool(key)
     cfg["ai_key_hint"] = f"…{key[-4:]}" if key else ""
     cfg["ai_model"] = s.get("ai_model") or "claude-haiku-5-5"
+    cfg["auth_mode"] = s.get("auth_mode") or "off"
+    cfg["auth_set"] = bool(s.get("auth_hash"))
+    cfg["sessions"] = [{"id": x["id"], "label": x.get("label", ""), "created": x.get("created", "")}
+                       for x in s.get("sessions", [])]
     skey = s.get("spoonacular_api_key") or ""
     cfg["recipes_enabled"] = bool(skey)
     cfg["recipes_key_hint"] = f"…{skey[-4:]}" if skey else ""
@@ -430,6 +439,21 @@ def apply_settings_changes(s, ch):
             spoon_get(key, "/recipes/findByIngredients", {"ingredients": "egg", "number": 1})  # raises if the key doesn't work
         s["spoonacular_api_key"] = key
         recipe_cache.clear()
+    if "auth_password" in ch:
+        pw = str(ch["auth_password"] or "")
+        if len(pw) < 6:
+            raise ValueError("Use at least 6 characters for the family password")
+        salt = secrets.token_hex(8)
+        s["auth_hash"] = f"{salt}${hash_pin(pw, salt)}"
+        s["sessions"] = []  # a new password signs out every other device
+    if "auth_mode" in ch:
+        if ch["auth_mode"] not in ("off", "away", "always"):
+            raise ValueError("Unknown sign-in setting")
+        if ch["auth_mode"] != "off" and not s.get("auth_hash"):
+            raise ValueError("Set a family password first")
+        s["auth_mode"] = ch["auth_mode"]
+    if ch.get("sign_out_all"):
+        s["sessions"] = []
     if "pin" in ch:
         pin = str(ch["pin"] or "")
         if pin and not re.fullmatch(r"\d{4,8}", pin):
@@ -439,6 +463,102 @@ def apply_settings_changes(s, ch):
             s["pin_hash"] = f"{salt}${hash_pin(pin, salt)}"
         else:
             s["pin_hash"] = ""
+
+
+# ---------- sign-in (optional; for using Hearth away from home) ----------
+
+SESSION_COOKIE = "hearth_session"
+SESSION_DAYS = 180
+TAILSCALE_NET = ipaddress.ip_network("100.64.0.0/10")
+login_failures = {}  # ip -> [timestamps]
+all_failures = []    # timestamps, to slow down guessing spread over many addresses
+
+
+def is_home_ip(ip):
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    if getattr(addr, "ipv4_mapped", None):
+        addr = addr.ipv4_mapped
+    return addr.is_private or addr.is_loopback or addr.is_link_local or (addr.version == 4 and addr in TAILSCALE_NET)
+
+
+def client_ip(handler):
+    """The visitor's real address. Forwarding headers are believed only when
+    they come from a proxy on the home network (e.g. Nginx Proxy Manager);
+    if a proxy forwards without saying who the visitor is, return None so the
+    visitor is treated as away from home."""
+    peer = handler.client_address[0]
+    if not is_home_ip(peer):
+        return peer
+    h = handler.headers
+    for name in ("CF-Connecting-IP", "X-Real-IP"):
+        if h.get(name):
+            return h[name].strip()
+    if h.get("X-Forwarded-For"):
+        return h["X-Forwarded-For"].split(",")[-1].strip()  # the entry added by our own proxy
+    if any(h.get(n) for n in ("X-Forwarded-Proto", "X-Forwarded-Host", "Forwarded")):
+        return None
+    return peer
+
+
+def is_home(handler):
+    ip = client_ip(handler)
+    return ip is not None and is_home_ip(ip)
+
+
+def session_token(handler):
+    raw = handler.headers.get("Cookie")
+    if not raw:
+        return ""
+    try:
+        jar = http.cookies.SimpleCookie(raw)
+    except http.cookies.CookieError:
+        return ""
+    return jar[SESSION_COOKIE].value if SESSION_COOKIE in jar else ""
+
+
+def current_session(handler):
+    token = session_token(handler)
+    if not token:
+        return None
+    digest = hashlib.sha256(token.encode()).hexdigest()
+    for sess in SETTINGS.get("sessions", []):
+        if secrets.compare_digest(sess["hash"], digest):
+            return sess
+    return None
+
+
+def sign_in_required(handler):
+    mode = SETTINGS.get("auth_mode") or "off"
+    if mode == "off" or not SETTINGS.get("auth_hash"):
+        return False
+    if mode == "away" and is_home(handler):
+        return False
+    return current_session(handler) is None
+
+
+def device_label(user_agent):
+    ua = user_agent or ""
+    for key, label in (("iPhone", "iPhone"), ("iPad", "iPad"), ("Android", "Android"), ("Windows", "Windows PC"),
+                       ("Macintosh", "Mac"), ("CrOS", "Chromebook"), ("Linux", "Linux")):
+        if key in ua:
+            return label
+    return "Browser"
+
+
+def too_many_failures(ip):
+    now = time.time()
+    window = 15 * 60
+    login_failures[ip] = [t for t in login_failures.get(ip, []) if now - t < window]
+    all_failures[:] = [t for t in all_failures if now - t < window]
+    return len(login_failures[ip]) >= 8 or len(all_failures) >= 50
+
+
+def note_failure(ip):
+    login_failures.setdefault(ip, []).append(time.time())
+    all_failures.append(time.time())
 
 
 # ---------- meal ideas (optional, uses the Claude API) ----------
@@ -828,11 +948,13 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Cache-Control", "no-cache")
         super().end_headers()
 
-    def send_json(self, obj, status=200):
+    def send_json(self, obj, status=200, headers=None):
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
+        for name, value in (headers or {}).items():
+            self.send_header(name, value)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -846,6 +968,71 @@ class Handler(SimpleHTTPRequestHandler):
             raise ValueError("expected a JSON object")
         return data
 
+    OPEN_PATHS = {"/api/health", "/api/login", "/icon.png", "/login.html"}
+
+    def gate(self):
+        """True if this request was answered with "please sign in"."""
+        path = urlparse(self.path).path
+        if path in self.OPEN_PATHS or not sign_in_required(self):
+            return False
+        if path.startswith("/api/"):
+            self.send_json({"error": "signin"}, 401)
+        else:
+            body = open(os.path.join(STATIC, "login.html"), "rb").read()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            if self.command != "HEAD":
+                self.wfile.write(body)
+        return True
+
+    def cookie_header(self, value, max_age):
+        secure = "; Secure" if self.headers.get("X-Forwarded-Proto", "").lower() == "https" else ""
+        return f"{SESSION_COOKIE}={value}; Path=/; Max-Age={max_age}; HttpOnly; SameSite=Lax{secure}"
+
+    def login(self):
+        ip = client_ip(self) or self.client_address[0]
+        if too_many_failures(ip):
+            return self.send_json({"error": "Too many tries. Wait 15 minutes and try again."}, 429)
+        try:
+            body = self.read_body(max_bytes=10_000)
+        except ValueError:
+            return self.send_json({"error": "Bad request"}, 400)
+        stored = SETTINGS.get("auth_hash") or ""
+        if not stored:
+            return self.send_json({"error": "Sign-in isn't set up."}, 400)
+        salt, digest = stored.split("$", 1)
+        if not secrets.compare_digest(hash_pin(str(body.get("password", "")), salt), digest):
+            note_failure(ip)
+            time.sleep(0.5)
+            return self.send_json({"error": "That password didn't work."}, 401)
+        token = secrets.token_urlsafe(32)
+        sess = {"id": secrets.token_hex(4), "hash": hashlib.sha256(token.encode()).hexdigest(),
+                "created": dt.date.today().isoformat(), "label": device_label(self.headers.get("User-Agent"))}
+        with settings_lock:
+            updated = deep(SETTINGS)
+            updated["sessions"] = (updated.get("sessions", []) + [sess])[-30:]
+            save_settings_doc(updated)
+            globals()["SETTINGS"] = updated
+        return self.send_json({"ok": True}, headers={"Set-Cookie": self.cookie_header(token, SESSION_DAYS * 86400)})
+
+    def logout(self):
+        sess = current_session(self)
+        if sess:
+            with settings_lock:
+                updated = deep(SETTINGS)
+                updated["sessions"] = [x for x in updated.get("sessions", []) if x["id"] != sess["id"]]
+                save_settings_doc(updated)
+                globals()["SETTINGS"] = updated
+        return self.send_json({"ok": True}, headers={"Set-Cookie": self.cookie_header("", 0)})
+
+    def do_HEAD(self):
+        if self.gate():
+            return
+        super().do_HEAD()
+
     def change_settings(self, mutate):
         """Run a settings change: PIN check, validation, save, reply."""
         if not pin_ok(self):
@@ -856,26 +1043,37 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json({"error": str(exc)}, 400)
         with settings_lock:
             updated = deep(SETTINGS)
+            current = current_session(self)
             try:
                 extra = mutate(updated, body) or {}
             except ValueError as exc:
                 return self.send_json({"error": str(exc)}, 400)
             except KeyError as exc:
                 return self.send_json({"error": f"missing {exc}"}, 400)
+            if current and (body.get("sign_out_all") or "auth_password" in body):
+                updated["sessions"] = [current]  # signing out "other devices" keeps this one
             try:
                 save_settings_doc(updated)
             except Exception as exc:
                 print(f"[hearth] couldn't save settings: {exc}", file=sys.stderr)
                 return self.send_json({"error": "Couldn't save. Is the database running?"}, 503)
             globals()["SETTINGS"] = updated
-        return self.send_json({"config": public_config(), **extra})
+        return self.send_json({"config": self.config_for_me(), **extra})
+
+    def config_for_me(self):
+        cfg = public_config()
+        cfg["at_home"] = is_home(self)
+        cfg["signed_in"] = current_session(self) is not None
+        return cfg
 
     def do_GET(self):
+        if self.gate():
+            return
         url = urlparse(self.path)
         if url.path == "/api/health":
             return self.send_json({"ok": True, "version": __version__})
         if url.path == "/api/config":
-            return self.send_json(public_config())
+            return self.send_json(self.config_for_me())
         if url.path == "/api/state":
             try:
                 return self.send_json(get_state())
@@ -895,6 +1093,12 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
+        if urlparse(self.path).path == "/api/login":
+            return self.login()
+        if self.gate():
+            return
+        if urlparse(self.path).path == "/api/logout":
+            return self.logout()
         if urlparse(self.path).path == "/api/pin-check":
             return self.send_json({"ok": True}) if pin_ok(self) else self.send_json({"error": "pin"}, 403)
         if urlparse(self.path).path == "/api/import-events":
@@ -934,6 +1138,8 @@ class Handler(SimpleHTTPRequestHandler):
         return self.change_settings(add)
 
     def do_PUT(self):
+        if self.gate():
+            return
         path = urlparse(self.path).path
         if path == "/api/state":
             try:
@@ -966,6 +1172,8 @@ class Handler(SimpleHTTPRequestHandler):
         return self.send_json({"error": "not found"}, 404)
 
     def do_DELETE(self):
+        if self.gate():
+            return
         m = re.fullmatch(r"/api/calendars/([0-9a-f]+)", urlparse(self.path).path)
         if not m:
             return self.send_json({"error": "not found"}, 404)

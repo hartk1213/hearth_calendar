@@ -19,6 +19,7 @@ Self-hosted, no subscription, set up entirely on screen.</p>
 - **Meal planner:** plan breakfast, lunch and dinner for the week. Tonight's dinner shows on the calendar.
 - **Pantry and recipes (optional):** list the food in the house and find real recipes that use it (free [Spoonacular](https://spoonacular.com/food-api) key), or ask Claude for ideas (Claude API key). Missing ingredients go to the grocery list in one tap.
 - **Set up on screen:** a first-run walkthrough and a Settings page, with no config files. Settings can be locked with a PIN.
+- **Safe to use away from home:** an optional family-password sign-in for devices outside your home Wi-Fi. The wall screen never has to sign in.
 - **Weather, clock, night mode and text size.** The screen goes dark overnight and returns to today when nobody's using it.
 - **Reliable:** stores data in MariaDB/MySQL (it creates its own database) or plain files, and keeps showing the last copy if the server goes down.
 
@@ -98,7 +99,8 @@ On Unraid, click **Apply update** next to Hearth in the Docker tab. Your data an
 ## Privacy and security
 
 - Calendar links, API keys and the PIN are stored on your server only. The app shows just a short hint of each.
-- There is **no login**: anyone on your home network can open Hearth. The PIN only protects Settings. Don't expose Hearth to the internet without putting it behind your own authentication, such as a reverse proxy with login or a VPN like Tailscale.
+- **Away from home:** before putting Hearth on a public web address (e.g. with Nginx Proxy Manager), turn on **Settings → Sign-in for away from home**. Devices outside your home network then need the family password once; devices at home, including the wall screen, don't. Hearth reads the visitor's address from your proxy's `X-Real-IP` / `X-Forwarded-For` header, and only trusts those headers from a proxy on your own network. Repeated wrong passwords are locked out for 15 minutes.
+- At home, anyone on your Wi-Fi can open Hearth. The PIN protects Settings and spending stars. For a private-network option instead of a public address, look at Tailscale.
 - Linked calendars are read-only. Hearth never changes your Google, iCloud or Outlook calendars.
 
 ## FAQ
@@ -106,6 +108,8 @@ On Unraid, click **Apply update** next to Hearth in the Docker tab. Your data an
 **Do events I add in Hearth go to Google Calendar?** No. Linked calendars are read-only, so events added in Hearth live in Hearth. Add an event in the Google Calendar app and it appears on the wall within the check interval (2 to 30 minutes, set in Settings), or right away with ↻.
 
 **I forgot the Settings PIN.** With MariaDB: `UPDATE hearth_state SET data = JSON_SET(data, '$.pin_hash', '') WHERE id = 2;` then restart Hearth. With file storage: remove the `pin_hash` value in `data/settings.json`, then restart.
+
+**I forgot the family password.** At home, open Settings → Sign-in → Change password (home devices don't need to sign in, unless it's set to "Every device"). If you're locked out completely, with MariaDB run: `UPDATE hearth_state SET data = JSON_SET(data, '$.auth_mode', 'off') WHERE id = 2;` and restart Hearth. With file storage, set `"auth_mode": "off"` in `data/settings.json`.
 
 **Times are off by a few hours.** Set `TZ` to your time zone (e.g. `America/Chicago`) and restart.
 

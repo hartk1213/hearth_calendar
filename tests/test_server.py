@@ -156,6 +156,70 @@ class HearthServerTest(unittest.TestCase):
         self.assertEqual(state["rewards"], [])
         self.assertEqual(state["star_log"], [])
 
+    def test_12_sign_in_away_from_home(self):
+        away = {"X-Real-IP": "8.8.8.8"}            # what Nginx Proxy Manager sends for an outside visitor
+        status, _ = self.call("PUT", "/api/settings", {"auth_mode": "away"})
+        self.assertEqual(status, 400)              # needs a password first
+        status, body = self.call("PUT", "/api/settings", {"auth_password": "letmein1", "auth_mode": "away"})
+        self.assertEqual(status, 200)
+        self.assertTrue(body["config"]["at_home"])
+        # At home: no sign-in needed.
+        self.assertEqual(self.call("GET", "/api/state")[0], 200)
+        # Away: API refuses, and the page is the sign-in page.
+        self.assertEqual(self.call("GET", "/api/state", headers=away)[0], 401)
+        req = urllib.request.Request(f"http://127.0.0.1:{self.port}/", headers=away)
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            self.assertIn(b"Family password", resp.read())
+        # A proxy that forwards without saying who the visitor is counts as away.
+        self.assertEqual(self.call("GET", "/api/state", headers={"X-Forwarded-Proto": "https"})[0], 401)
+        # Faking a home address in X-Forwarded-For doesn't work: only the entry our proxy added counts.
+        self.assertEqual(self.call("GET", "/api/state", headers={"X-Forwarded-For": "192.168.1.5, 8.8.8.8"})[0], 401)
+        # Wrong password, then the right one.
+        status, body = self.call("POST", "/api/login", {"password": "nope"}, away)
+        self.assertEqual(status, 401)
+        req = urllib.request.Request(f"http://127.0.0.1:{self.port}/api/login", method="POST",
+                                     data=json.dumps({"password": "letmein1"}).encode(),
+                                     headers={"Content-Type": "application/json", "X-Forwarded-Proto": "https", **away})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            cookie = resp.headers["Set-Cookie"]
+        self.assertIn("HttpOnly", cookie)
+        self.assertIn("Secure", cookie)
+        token = cookie.split(";")[0]
+        signed_in = {**away, "Cookie": token}
+        status, cfg = self.call("GET", "/api/config", headers=signed_in)
+        self.assertEqual(status, 200)
+        self.assertTrue(cfg["signed_in"])
+        self.assertFalse(cfg["at_home"])
+        self.assertEqual(len(cfg["sessions"]), 1)
+        self.assertNotIn("hash", cfg["sessions"][0])
+        # Sign out: the cookie stops working.
+        self.assertEqual(self.call("POST", "/api/logout", {}, signed_in)[0], 200)
+        self.assertEqual(self.call("GET", "/api/state", headers=signed_in)[0], 401)
+
+    def test_13_sign_in_rate_limit(self):
+        attacker = {"X-Real-IP": "203.0.113.9"}
+        codes = [self.call("POST", "/api/login", {"password": f"guess{i}"}, attacker)[0] for i in range(9)]
+        self.assertEqual(codes[:8], [401] * 8)
+        self.assertEqual(codes[8], 429)
+        # The right password is refused too while locked out.
+        self.assertEqual(self.call("POST", "/api/login", {"password": "letmein1"}, attacker)[0], 429)
+
+    def test_14_sign_in_always_and_off(self):
+        status, _ = self.call("PUT", "/api/settings", {"auth_mode": "always"})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.call("GET", "/api/state")[0], 401)      # even at home now
+        self.assertEqual(self.call("GET", "/api/health")[0], 200)     # the Pi's start-up check still works
+        # Turning it off needs a signed-in device now.
+        status, _ = self.call("PUT", "/api/settings", {"auth_mode": "off"})
+        self.assertEqual(status, 401)
+        req = urllib.request.Request(f"http://127.0.0.1:{self.port}/api/login", method="POST",
+                                     data=json.dumps({"password": "letmein1"}).encode(), headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            token = resp.headers["Set-Cookie"].split(";")[0]
+        status, body = self.call("PUT", "/api/settings", {"auth_mode": "off"}, {"Cookie": token})
+        self.assertEqual(status, 200)
+        self.assertEqual(self.call("GET", "/api/state")[0], 200)
+
     def test_08_serves_app(self):
         with urllib.request.urlopen(f"http://127.0.0.1:{self.port}/?kiosk=1", timeout=5) as resp:
             self.assertEqual(resp.status, 200)

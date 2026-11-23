@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0 (2026-11-22)
+
+- **Sign-in for away from home:** an optional family password, set in Settings. Choose "Away from home" (the default), "Every device" or "Off". Devices stay signed in for 6 months. Settings shows the signed-in devices and can sign out the others.
+- Works behind Nginx Proxy Manager, Cloudflare and similar proxies. Forwarded addresses are trusted only from a proxy on your own network, and an unknown forwarded visitor counts as away.
+- Wrong passwords are limited (8 per address and 50 overall per 15 minutes). Session cookies are HttpOnly, and Secure over HTTPS.
+- Signing out also clears the copy of the calendar kept in that browser.
+
 ## 1.1.0 (2026-11-22)
 
 - **Star rewards:** chores earn stars (none, 1, 2, 3 or 5). Kids spend them on rewards you set up, with ideas to start from. Parents can give or take bonus stars. Spending and editing rewards need the Settings PIN, if one is set.
