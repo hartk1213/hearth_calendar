@@ -1,0 +1,19 @@
+# Your secrets and your family's data never go to GitHub
+.env
+data/
+data.json
+settings.json
+config.json
+docker-compose.override.yml
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

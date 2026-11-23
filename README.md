@@ -10,10 +10,11 @@ Self-hosted, no subscription, set up entirely on screen.</p>
 
 ## Features
 
-- **Family calendar:** week, month and agenda views, with a color for each person and filters to show or hide anyone.
+- **Family calendar:** day (a column for each person), week, month and agenda views, with a color for each person and filters to show or hide anyone.
 - **Your existing calendars:** link Google, iPhone/iCloud and Outlook calendars by pasting their private link. They update by themselves every few minutes, and a ↻ button checks right away.
 - **Add events anywhere:** from the wall screen, or from any phone or computer on your home Wi-Fi.
-- **Chore chart:** a column for each person, chores that repeat on chosen days, and check-offs that reset daily.
+- **📷 Snap a flyer (optional):** photograph a school flyer, upload a PDF schedule or paste an email. Claude finds the dates, and you check them before they're added.
+- **Chore chart with star rewards:** a column for each person, chores that repeat on chosen days, and stars for finishing them. Kids spend stars on rewards you choose ("30 min screen time", "pick dinner"); spending is PIN-protected.
 - **Lists:** groceries, to-dos, packing lists and anything else.
 - **Meal planner:** plan breakfast, lunch and dinner for the week. Tonight's dinner shows on the calendar.
 - **Pantry and recipes (optional):** list the food in the house and find real recipes that use it (free [Spoonacular](https://spoonacular.com/food-api) key), or ask Claude for ideas (Claude API key). Missing ingredients go to the grocery list in one tap.
@@ -21,9 +22,13 @@ Self-hosted, no subscription, set up entirely on screen.</p>
 - **Weather, clock, night mode and text size.** The screen goes dark overnight and returns to today when nobody's using it.
 - **Reliable:** stores data in MariaDB/MySQL (it creates its own database) or plain files, and keeps showing the last copy if the server goes down.
 
-| Month | Chores | Meals and recipes |
+| Day view | Chores | Star rewards |
 |---|---|---|
-| ![Month](docs/screenshots/month.png) | ![Chores](docs/screenshots/chores.png) | ![Meals](docs/screenshots/meals.png) |
+| ![Day](docs/screenshots/day.png) | ![Chores](docs/screenshots/chores.png) | ![Rewards](docs/screenshots/rewards.png) |
+
+| Month | Meals and recipes | Snap a flyer |
+|---|---|---|
+| ![Month](docs/screenshots/month.png) | ![Meals](docs/screenshots/meals.png) | ![Import](docs/screenshots/import.png) |
 
 | Settings | Phone |
 |---|---|
@@ -56,7 +61,7 @@ Then set up the wall screen with [docs/RASPBERRY-PI.md → Wall screen](docs/RAS
 ### Docker Compose
 
 ```bash
-git clone https://github.com/hartk1213/hearth.git
+git clone https://github.com/hartk1213/hearth_calendar.git hearth
 cd hearth
 cp .env.example .env        # set TZ; add database details only if you want MariaDB
 docker compose up -d
@@ -75,12 +80,12 @@ The image is published for both `amd64` and `arm64` as `ghcr.io/hartk1213/hearth
 | Pi power supply, 32 GB microSD, micro-HDMI to HDMI cable, USB cable | Right-angle plugs let the screen sit flush against the wall. |
 | VESA wall mount | Screw it into studs for screens 24" and up. |
 
-## Optional: recipes and meal ideas
+## Optional: recipes, meal ideas and flyer import
 
 Both are off until you add a key in **Settings**. Keys are stored on the server only and never sent to browsers.
 
 - **Recipe database:** real recipes with photos and full steps, matched to your pantry, from Spoonacular. The free plan covers a few searches a day. Hearth remembers results for 6 hours, and one search covers breakfast, lunch and dinner.
-- **Meal ideas:** Claude suggests dishes from what you have, following your notes (e.g. "quick, no pork"). This needs a Claude API key from [platform.claude.com](https://platform.claude.com); Anthropic bills the account per use.
+- **Claude (one key, two features):** **📷 Import** turns photos, PDFs and pasted emails into events, which you review before they're added. **Meal ideas** suggests dishes from what you have, following your notes (e.g. "quick, no pork"). This needs a Claude API key from [platform.claude.com](https://platform.claude.com); Anthropic bills the account per use.
 
 ## Updating
 

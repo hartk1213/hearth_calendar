@@ -1,0 +1,14 @@
+.git
+.github
+.env
+data/
+data.json
+settings.json
+config.json
+docs/
+tests/
+unraid/
+*.md
+docker-compose*.yml
+__pycache__/
+.venv/

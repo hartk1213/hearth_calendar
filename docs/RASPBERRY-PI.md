@@ -12,7 +12,7 @@ The easiest way is Docker. Open a terminal on the Pi and run these one at a time
 ```bash
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER && newgrp docker
-git clone https://github.com/hartk1213/hearth.git ~/hearth && cd ~/hearth
+git clone https://github.com/hartk1213/hearth_calendar.git ~/hearth && cd ~/hearth
 cp .env.example .env && nano .env      # set TZ, then Ctrl+O, Enter, Ctrl+X
 docker compose up -d
 ```

@@ -2,17 +2,17 @@
 <Container version="2">
   <Name>hearth</Name>
   <Repository>ghcr.io/hartk1213/hearth:latest</Repository>
-  <Registry>https://github.com/hartk1213/hearth/pkgs/container/hearth</Registry>
+  <Registry>https://github.com/hartk1213/hearth_calendar/pkgs/container/hearth</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support>https://github.com/hartk1213/hearth/issues</Support>
-  <Project>https://github.com/hartk1213/hearth</Project>
+  <Support>https://github.com/hartk1213/hearth_calendar/issues</Support>
+  <Project>https://github.com/hartk1213/hearth_calendar</Project>
   <Overview>Hearth is a DIY family wall calendar for a touchscreen: shared calendar with Google/iCloud/Outlook calendars, chore chart, lists, meal planner and pantry recipes. Everything is set up inside the app. Data is stored in MariaDB/MySQL, or in the Data folder if no database is set.</Overview>
   <Category>Productivity: HomeAutomation:</Category>
   <WebUI>http://[IP]:[PORT:8080]/</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/hartk1213/hearth/main/unraid/hearth.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/hartk1213/hearth/main/docs/icon.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/hartk1213/hearth_calendar/main/unraid/hearth.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/hartk1213/hearth_calendar/main/docs/icon.png</Icon>
   <ExtraParams>--user 99:100</ExtraParams>
   <Config Name="Web page port" Target="8080" Default="8095" Mode="tcp" Description="Open Hearth at http://your-server:this-port. Change it if another app already uses it." Type="Port" Display="always" Required="true" Mask="false">8095</Config>
   <Config Name="Time zone" Target="TZ" Default="America/Los_Angeles" Mode="" Description="So calendar times are right, e.g. America/New_York, Europe/London." Type="Variable" Display="always" Required="true" Mask="false">America/Los_Angeles</Config>

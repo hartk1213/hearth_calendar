@@ -7,7 +7,7 @@ This takes about 10 minutes. You'll fill in a form in Unraid's Docker tab, then 
 Open the Unraid terminal (the **>_** icon at the top right), paste this line and press Enter:
 
 ```bash
-wget -qO /boot/config/plugins/dockerMan/templates-user/my-hearth.xml https://raw.githubusercontent.com/hartk1213/hearth/main/unraid/hearth.xml
+wget -qO /boot/config/plugins/dockerMan/templates-user/my-hearth.xml https://raw.githubusercontent.com/hartk1213/hearth_calendar/main/unraid/hearth.xml
 ```
 
 Then close the terminal.

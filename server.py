@@ -6,7 +6,7 @@ linked calendars, settings, chores, lists, meals, events) in MariaDB/MySQL
 when DB_HOST is set, otherwise in JSON files. All setup happens in the app;
 there is no config file to edit.
 """
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 import copy
 import datetime as dt
@@ -55,6 +55,8 @@ DEFAULT_STATE = {
     ],
     "meals": {},
     "pantry": [],
+    "rewards": [],
+    "star_log": [],
 }
 
 DEFAULT_SETTINGS = {
@@ -365,7 +367,7 @@ def apply_settings_changes(s, ch):
     if "week_start" in ch:
         s["week_start"] = 1 if ch["week_start"] == 1 else 0
     if "default_view" in ch:
-        if ch["default_view"] not in ("week", "month", "agenda"):
+        if ch["default_view"] not in ("day", "week", "month", "agenda"):
             raise ValueError("Unknown view")
         s["default_view"] = ch["default_view"]
     if "ui_scale" in ch:
@@ -442,7 +444,8 @@ def apply_settings_changes(s, ch):
 # ---------- meal ideas (optional, uses the Claude API) ----------
 
 def ask_claude(key, model, system, prompt, max_tokens=2000):
-    """Call the Claude Messages API. Returns the reply text, or raises
+    """Call the Claude Messages API. `prompt` is a string or a list of content
+    blocks (text, image, document). Returns the reply text, or raises
     ValueError with a message the app can show."""
     body = json.dumps({
         "model": model,
@@ -472,6 +475,8 @@ def ask_claude(key, model, system, prompt, max_tokens=2000):
                              "or check billing in the Claude Console.")
         if exc.code == 400 and "credit" in detail.lower():
             raise ValueError("The Claude account is out of credit. Add credit in the Claude Console.")
+        if exc.code in (400, 413) and any(w in detail.lower() for w in ("image", "pdf", "document", "too large", "size")):
+            raise ValueError("Claude couldn't read that file. Try a clearer photo, or a smaller PDF.")
         raise ValueError(f"Claude returned an error ({exc.code}). Try again in a minute.")
     except (urllib.error.URLError, TimeoutError, OSError):
         raise ValueError("Couldn't reach Claude. Check the server's internet connection.")
@@ -527,6 +532,73 @@ def meal_ideas(body):
     if not ideas:
         raise ValueError("Claude didn't come up with anything. Try again or add more food.")
     return {"ideas": ideas, "meal": meal}
+
+
+# ---------- snap a flyer: photos, PDFs and emails -> events (uses Claude) ----------
+
+IMPORT_SYSTEM = """You read flyers, school notices, sports schedules, emails and screenshots and pull out calendar events.
+Reply with JSON only (no markdown, no commentary) in exactly this shape:
+{"events": [{"title": "short title", "date": "YYYY-MM-DD", "start": "HH:MM" or null, "end": "HH:MM" or null,
+  "location": "place or empty string", "who": "one of the family names, or Everyone"}]}
+Rules:
+- One entry per occurrence: a practice listed on four dates is four entries. At most 40 entries.
+- Use 24-hour times. Use null for start and end when there is no time (an all-day event).
+- Work out relative or partial dates from today's date; when the year is missing, pick the next upcoming date.
+- Include deadlines as all-day events whose title starts with "Due: ".
+- Keep titles short and specific, e.g. "Soccer game vs. Eagles" or "Picture day".
+- Set "who" to a family member only when the text clearly refers to that person; otherwise use "Everyone".
+- If there are no events, reply {"events": []}."""
+
+IMAGE_TYPES = ("image/jpeg", "image/png", "image/webp", "image/gif")
+TIME_RE = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+
+
+def import_events(body):
+    key = SETTINGS.get("anthropic_api_key")
+    if not key:
+        raise ValueError("Importing needs Claude. Add a Claude API key in Settings.")
+    content = []
+    image = body.get("image")
+    if image:
+        if image.get("media_type") not in IMAGE_TYPES or not image.get("data"):
+            raise ValueError("That kind of image isn't supported. Try a JPEG or PNG photo.")
+        content.append({"type": "image", "source": {"type": "base64", "media_type": image["media_type"], "data": image["data"]}})
+    if body.get("pdf"):
+        content.append({"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": body["pdf"]}})
+    text = str(body.get("text") or "").strip()[:30000]
+    if text:
+        content.append({"type": "text", "text": "Text to read:\n" + text})
+    if not content:
+        raise ValueError("Add a photo, a PDF or some text first.")
+    names = [m["name"] for m in SETTINGS["members"]]
+    today = dt.date.today()
+    content.append({"type": "text", "text": f"Today is {today:%A, %B %d, %Y}. Family members: "
+                    f"{', '.join(names) if names else 'none listed'}. List the events."})
+    reply = ask_claude(key, SETTINGS.get("ai_model") or "claude-haiku-5-5", IMPORT_SYSTEM, content, 4000)
+    try:
+        raw = json.loads(reply[reply.index("{"): reply.rindex("}") + 1])["events"]
+    except (ValueError, KeyError, TypeError):
+        print(f"[hearth] couldn't read import reply: {reply[:300]!r}", file=sys.stderr)
+        raise ValueError("Claude's answer came back garbled. Try again.")
+    events = []
+    for ev in raw if isinstance(raw, list) else []:
+        if not isinstance(ev, dict):
+            continue
+        title = str(ev.get("title") or "").strip()[:100]
+        try:
+            date = dt.date.fromisoformat(str(ev.get("date")))
+        except ValueError:
+            continue
+        if not title:
+            continue
+        start = str(ev.get("start") or "")
+        end = str(ev.get("end") or "")
+        start = start if TIME_RE.match(start) else ""
+        end = end if start and TIME_RE.match(end) else ""
+        who = ev.get("who") if ev.get("who") in names else EVERYONE
+        events.append({"title": title, "date": date.isoformat(), "start": start, "end": end,
+                       "location": str(ev.get("location") or "").strip()[:100], "who": who})
+    return {"events": events[:40]}
 
 
 # ---------- recipe database (optional, uses Spoonacular) ----------
@@ -765,9 +837,9 @@ class Handler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def read_body(self):
+    def read_body(self, max_bytes=5_000_000):
         length = int(self.headers.get("Content-Length", 0) or 0)
-        if length > 5_000_000:
+        if length > max_bytes:
             raise ValueError("too large")
         data = json.loads(self.rfile.read(length) or b"{}")
         if not isinstance(data, dict):
@@ -823,6 +895,17 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
+        if urlparse(self.path).path == "/api/pin-check":
+            return self.send_json({"ok": True}) if pin_ok(self) else self.send_json({"error": "pin"}, 403)
+        if urlparse(self.path).path == "/api/import-events":
+            try:
+                return self.send_json(import_events(self.read_body(max_bytes=15_000_000)))
+            except ValueError as exc:
+                msg = "That file is too big. Try a smaller photo or PDF." if str(exc) == "too large" else str(exc)
+                return self.send_json({"error": msg}, 400)
+            except Exception as exc:
+                print(f"[hearth] import failed: {exc}", file=sys.stderr)
+                return self.send_json({"error": "Something went wrong. Try again."}, 500)
         if urlparse(self.path).path == "/api/events/refresh":
             return self.send_json(refresh_calendars())
         if urlparse(self.path).path in ("/api/meal-ideas", "/api/recipes"):

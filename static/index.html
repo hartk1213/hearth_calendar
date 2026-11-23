@@ -235,6 +235,48 @@ details.help li{margin:6px 0;line-height:1.4}
 .btn.spin{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.btn.spin{animation:none;opacity:.5}}
+
+/* star rewards */
+.star-total{font-weight:800;font-size:18px;white-space:nowrap}
+.chore .stars{font-size:13px;white-space:nowrap}
+.rewards{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding-bottom:20px}
+.rewards h3{margin:8px 0 0;font-size:19px}
+.star-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.star-card{background:var(--card);border-radius:var(--radius);padding:14px;display:flex;align-items:center;gap:12px;border-top:5px solid var(--c)}
+.star-card .grow{flex:1}
+.star-big{font-size:30px;font-weight:800}
+.adj{display:flex;flex-direction:column;gap:6px}
+.adj .btn{min-height:40px;width:40px;font-size:20px}
+.reward-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.reward{background:var(--card);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;position:relative}
+.kebab.corner{position:absolute;top:6px;right:6px}
+.reward-emoji{font-size:44px;line-height:1.1}
+.reward-title{font-weight:700;font-size:18px}
+.reward-cost{font-weight:800;color:#a8740f}
+.redeem{display:flex;flex-direction:column;gap:6px;width:100%}
+.redeem .btn{display:flex;align-items:center;gap:8px;justify-content:center;border:2px solid var(--c)}
+.star-log{background:var(--card);border-radius:var(--radius);padding:4px 14px}
+.star-log .pos{color:#2e7d4f}.star-log .neg{color:#c0392b}
+.emoji-in{text-align:center;font-size:24px}
+.idea-chip{border:0;cursor:pointer;padding:8px 12px}
+/* day view */
+.dayview-wrap{flex:1;min-height:0;display:flex;flex-direction:column;gap:10px}
+.dayview{flex:1}
+.day-h.person{gap:10px;border-bottom:4px solid var(--c);padding-bottom:10px}
+.day-h .pn{font-weight:700;font-size:18px}
+.day-dinner{background:var(--card);border-radius:12px;padding:10px 16px;font-size:16px}
+/* import */
+.hidden-file{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.file-btn{display:flex;justify-content:center;align-items:center;width:100%;margin-bottom:10px;border:2px dashed var(--line);box-shadow:none;cursor:pointer;min-height:60px}
+.import-preview img{max-width:100%;max-height:180px;border-radius:10px;display:block;margin:0 auto 10px}
+textarea{font:inherit;font-size:16px;padding:10px 12px;border:1.5px solid var(--line);border-radius:10px;width:100%;resize:vertical;user-select:text;-webkit-user-select:text}
+.modal:has(.imp-list){width:min(760px,100%)}
+.imp-list{display:flex;flex-direction:column;gap:8px;max-height:55vh;overflow-y:auto}
+.imp-row{display:flex;gap:10px;align-items:flex-start;background:var(--bg);border-radius:12px;padding:10px}
+.imp-row>input[type=checkbox]{width:24px;height:24px;min-height:0;margin-top:10px;flex:none}
+.imp-fields{flex:1;display:flex;flex-direction:column;gap:6px;min-width:0}
+.imp-line{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.imp-line input[type=date]{flex:1 1 140px}.imp-line input[type=time]{flex:1 1 100px}.imp-line select{flex:1 1 120px}
 </style>
 </head>
 <body>
@@ -347,6 +389,16 @@ function demoState() {
   const c = (title, member, days) => ({ id: uid(), title, member, days, done: {} });
   return {
     rev: 1, events: [], meals,
+    rewards: [
+      { id: uid(), emoji: "\ud83d\udcf1", title: "30 min screen time", cost: 5 },
+      { id: uid(), emoji: "\ud83c\udf66", title: "Ice cream", cost: 10 },
+      { id: uid(), emoji: "\ud83c\udfac", title: "Pick movie night", cost: 15 }
+    ],
+    star_log: [
+      { id: uid(), member: "Maya", delta: 7, reason: "Earlier stars", date: ymd(addDays(new Date(), -3)) },
+      { id: uid(), member: "Leo", delta: 4, reason: "Earlier stars", date: ymd(addDays(new Date(), -3)) },
+      { id: uid(), member: "Leo", delta: 1, reason: "Bonus star", date: ymd(addDays(new Date(), -1)) }
+    ],
     pantry: ["chicken", "rice", "eggs", "frozen peas", "soy sauce", "tortillas", "cheddar", "black beans", "canned tomatoes", "chicken broth"].map(text => ({ id: uid(), text })),
     chores: [
       c("Pack lunches", "Mom", wkd), c("Water plants", "Mom", [0, 3]),
@@ -431,7 +483,7 @@ function commit(mut, { silent = false } = {}) {
   });
 }
 function normalizeState() {
-  STATE.events ||= []; STATE.chores ||= []; STATE.lists ||= []; STATE.meals ||= {}; STATE.pantry ||= [];
+  STATE.events ||= []; STATE.chores ||= []; STATE.lists ||= []; STATE.meals ||= {}; STATE.pantry ||= []; STATE.rewards ||= []; STATE.star_log ||= [];
 }
 function toast(msg) {
   const t = $("#toast"); t.textContent = msg; t.classList.add("show");
@@ -468,6 +520,7 @@ function eventsOn(day) {
 function viewRange() {
   if (UI.cal === "month") { const s = startOfWeek(new Date(UI.anchor.getFullYear(), UI.anchor.getMonth(), 1)); return [s, addDays(s, 42)]; }
   if (UI.cal === "week") { const s = startOfWeek(UI.anchor); return [s, addDays(s, 7)]; }
+  if (UI.cal === "day") { const s = startOfDay(UI.anchor); return [s, addDays(s, 1)]; }
   const s = startOfDay(UI.anchor); return [s, addDays(s, 14)];
 }
 async function refreshNow(btn) {
@@ -555,20 +608,22 @@ function renderCalendar(m) {
       class: "chip" + (UI.hidden.has(mm.name) ? " off" : ""),
       onclick: () => { UI.hidden.has(mm.name) ? UI.hidden.delete(mm.name) : UI.hidden.add(mm.name); render(); }
     }, avatar(mm.name), mm.name))),
-    seg([["week", "Week"], ["month", "Month"], ["agenda", "Agenda"]], UI.cal, v => { UI.cal = v; refreshCal(); }),
+    seg([["day", "Day"], ["week", "Week"], ["month", "Month"], ["agenda", "Agenda"]], UI.cal, v => { UI.cal = v; refreshCal(); }),
+    CFG.ai_enabled ? h("button", { class: "btn", title: "Add events from a photo, PDF or email", onclick: () => importEvents() }, "\ud83d\udcf7 Import") : null,
     (CFG.calendars || []).length ? h("button", { class: "btn icon", "aria-label": "Check calendars now", title: "Check calendars now", onclick: e => refreshNow(e.currentTarget) }, "\u21bb") : null,
     h("button", { class: "btn primary", onclick: () => editEvent({ date: ymd(UI.anchor) }) }, "+ Event")
   ));
-  m.append(UI.cal === "week" ? weekView() : UI.cal === "month" ? monthView() : agendaView());
+  m.append(UI.cal === "day" ? dayView() : UI.cal === "week" ? weekView() : UI.cal === "month" ? monthView() : agendaView());
 }
 function shift(n) {
   const a = UI.anchor;
-  UI.anchor = UI.cal === "month" ? new Date(a.getFullYear(), a.getMonth() + n, 1) : addDays(a, n * (UI.cal === "week" ? 7 : 14));
+  UI.anchor = UI.cal === "month" ? new Date(a.getFullYear(), a.getMonth() + n, 1) : addDays(a, n * ({ day: 1, week: 7 }[UI.cal] || 14));
   refreshCal();
 }
 function refreshCal() { render(); loadFeeds(); }
 function calTitle() {
   if (UI.cal === "month") return UI.anchor.toLocaleDateString([], { month: "long", year: "numeric" });
+  if (UI.cal === "day") return dayLabel(UI.anchor);
   const [s, e] = viewRange(), last = addDays(e, -1), o = { month: "short", day: "numeric" };
   return `${s.toLocaleDateString([], o)} – ${last.toLocaleDateString([], o)}, ${last.getFullYear()}`;
 }
@@ -587,6 +642,23 @@ function weekView() {
       dinner ? h("div", { class: "day-meal" }, "🍽 ", dinner) : null));
   }
   return g;
+}
+function dayView() {
+  // One column per person, so everyone can find their own day at a glance.
+  const d = startOfDay(UI.anchor), k = ymd(d), evs = eventsOn(d);
+  const cols = members().filter(mm => visible(mm.name)).map(mm => mm.name);
+  if (evs.some(e => !e.member || e.member === EVERYONE)) cols.push(EVERYONE);
+  if (!cols.length) cols.push(EVERYONE);
+  const dinner = (STATE.meals[k] || {}).dinner;
+  const g = h("div", { class: "week dayview", style: `grid-template-columns:repeat(${cols.length},minmax(170px,1fr))` });
+  for (const p of cols) {
+    const mine = evs.filter(e => (e.member || EVERYONE) === p || (cols.length === 1 && p === EVERYONE));
+    g.append(h("div", { class: "day", style: `--c:${colorOf(p)}` },
+      h("div", { class: "day-h person" }, avatar(p), h("span", { class: "pn" }, p)),
+      h("div", { class: "day-body", onclick: ev => { if (ev.target === ev.currentTarget) editEvent({ date: k, member: p }); } },
+        mine.length ? mine.map(evCard) : h("p", { class: "empty" }, "Nothing planned"))));
+  }
+  return h("div", { class: "dayview-wrap" }, g, dinner ? h("div", { class: "day-dinner" }, "\ud83c\udf7d Tonight's dinner: ", h("b", {}, dinner)) : null);
 }
 function monthView() {
   const first = new Date(UI.anchor.getFullYear(), UI.anchor.getMonth(), 1), s = startOfWeek(first), today = ymd(new Date());
@@ -620,6 +692,113 @@ function showDay(d) {
   openModal(dayLabel(d), h("div", { class: "evs" }, evs.length ? evs.map(evCard) : h("p", { class: "empty" }, "Nothing scheduled.")),
     [["Close", "", () => {}], ["+ Event", "primary", () => { setTimeout(() => editEvent({ date: ymd(d) }), 0); }]]);
 }
+/* snap a flyer: photo / PDF / email text -> events, reviewed before adding */
+function fileToPayload(file) {
+  return new Promise((resolve, reject) => {
+    if (file.type === "application/pdf") {
+      if (file.size > 10e6) return reject(new Error("That PDF is too big. Try one under 10 MB."));
+      const fr = new FileReader();
+      fr.onload = () => resolve({ pdf: String(fr.result).split(",")[1] });
+      fr.onerror = () => reject(new Error("Couldn't read that file."));
+      return fr.readAsDataURL(file);
+    }
+    if (!file.type.startsWith("image/")) return reject(new Error("Choose a photo or a PDF."));
+    // Shrink big phone photos before sending: faster, cheaper, and Claude reads them just as well.
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve({ image: { media_type: "image/jpeg", data: c.toDataURL("image/jpeg", 0.85).split(",")[1] } });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Couldn't open that image. Try a JPEG or PNG.")); };
+    img.src = url;
+  });
+}
+function importEvents() {
+  let file = null, busy = false;
+  const input = h("input", { type: "file", accept: "image/*,application/pdf", class: "hidden-file" });
+  const pickLabel = h("span", {}, "📷 Take a photo or choose a file");
+  const preview = h("div", { class: "import-preview" });
+  input.addEventListener("change", () => {
+    file = input.files[0] || null;
+    preview.replaceChildren();
+    if (!file) { pickLabel.textContent = "📷 Take a photo or choose a file"; return; }
+    pickLabel.textContent = "✓ " + file.name;
+    if (file.type.startsWith("image/")) preview.append(h("img", { src: URL.createObjectURL(file), alt: "" }));
+  });
+  const text = h("textarea", { rows: 4, placeholder: "…or paste the text of an email or website here" });
+  const status = h("div", { class: "status" });
+  openModal("Add events from a flyer", h("div", {},
+    h("p", { class: "muted" }, "Snap a school flyer, a sports schedule or a PDF, or paste an email. Claude finds the dates and you check them before anything is added."),
+    h("label", { class: "btn file-btn" }, input, pickLabel), preview, text, status),
+    [["Cancel", "", () => {}], ["Find events", "primary", () => {
+      if (busy) return false;
+      if (!file && !text.value.trim()) { status.className = "status err"; status.textContent = "Choose a photo or paste some text first."; return false; }
+      busy = true; status.className = "status"; status.textContent = "Reading it… this can take up to a minute.";
+      (async () => {
+        try {
+          const payload = file ? await fileToPayload(file) : {};
+          if (text.value.trim()) payload.text = text.value.trim();
+          let res;
+          if (API.demo) { await new Promise(r => setTimeout(r, 900)); res = demoImport(); }
+          else {
+            const r = await fetch("api/import-events", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+            res = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(res.error || "Something went wrong. Try again.");
+          }
+          if (!res.events.length) { busy = false; status.className = "status err"; status.textContent = "Claude didn't find any dates in that. Try a clearer photo."; return; }
+          closeModal(); reviewImported(res.events);
+        } catch (e) { busy = false; status.className = "status err"; status.textContent = e.message === "Failed to fetch" ? "Can't reach the Hearth server right now." : e.message; }
+      })();
+      return false;
+    }]]);
+}
+function reviewImported(found) {
+  const rows = found.map(ev => {
+    const r = {
+      on: h("input", { type: "checkbox", checked: true }),
+      title: h("input", { value: ev.title }),
+      date: h("input", { type: "date", value: ev.date }),
+      start: h("input", { type: "time", value: ev.start || "" }),
+      end: h("input", { type: "time", value: ev.end || "" }),
+      who: memberSelect(ev.who || EVERYONE),
+      location: ev.location || ""
+    };
+    r.el = h("div", { class: "imp-row" }, r.on, h("div", { class: "imp-fields" }, r.title,
+      h("div", { class: "imp-line" }, r.date, r.start, h("span", { class: "muted" }, "to"), r.end, r.who),
+      r.location ? h("div", { class: "muted small" }, "📍 " + r.location) : null));
+    return r;
+  });
+  openModal(`Found ${found.length} event${found.length === 1 ? "" : "s"}`, h("div", {},
+    h("p", { class: "muted small" }, "Check the details, untick anything you don't want, then add them. Leave the times empty for all-day events."),
+    h("div", { class: "imp-list" }, rows.map(r => r.el))),
+    [["Cancel", "", () => {}], ["Add to calendar", "primary", () => {
+      const picked = rows.filter(r => r.on.checked && r.title.value.trim() && r.date.value);
+      if (!picked.length) return false;
+      const recs = picked.map(r => {
+        const d = r.date.value, base = { id: uid(), title: r.title.value.trim(), member: r.who.value, location: r.location };
+        if (!r.start.value) return { ...base, start: d, end: ymd(addDays(parseYmd(d), 1)), allDay: true };
+        const s = new Date(`${d}T${r.start.value}`);
+        let e = r.end.value ? new Date(`${d}T${r.end.value}`) : null;
+        if (!e || isNaN(e) || e <= s) e = new Date(s.getTime() + 3600000);
+        return { ...base, start: isoLocal(s), end: isoLocal(e), allDay: false };
+      });
+      commit(st => { for (const rec of recs) if (!st.events.some(x => x.id === rec.id)) st.events.push(rec); });
+      toast(`Added ${recs.length} event${recs.length === 1 ? "" : "s"}`);
+      UI.anchor = parseYmd(recs.map(r => r.start.slice(0, 10)).sort()[0]); refreshCal();
+    }]]);
+}
+function demoImport() {
+  const w = startOfWeek(new Date()), d = n => ymd(addDays(w, n));
+  return { events: [
+    { title: "Picture day", date: d(9), start: "", end: "", location: "Lincoln Elementary", who: "Maya" },
+    { title: "Soccer game vs. Eagles", date: d(13), start: "09:00", end: "10:30", location: "Riverside Park field 2", who: "Maya" },
+    { title: "Due: field trip permission slip", date: d(10), start: "", end: "", location: "", who: "Leo" }
+  ] };
+}
 function showEvent(e) {
   let when;
   if (e.allDay) {
@@ -639,10 +818,10 @@ function showEvent(e) {
   actions.push(["Close", "primary", () => {}]);
   openModal(e.title, body, actions);
 }
-function editEvent({ date, event: ev }) {
+function editEvent({ date, event: ev, member }) {
   const f = {
     title: h("input", { value: ev ? ev.title : "", placeholder: "What's happening?" }),
-    member: memberSelect(ev ? ev.member || EVERYONE : EVERYONE),
+    member: memberSelect(ev ? ev.member || EVERYONE : member || EVERYONE),
     date: h("input", { type: "date", value: ev ? ev.start.slice(0, 10) : date }),
     allDay: h("input", { type: "checkbox" }),
     start: h("input", { type: "time", value: ev && !ev.allDay ? ev.start.slice(11, 16) : "09:00" }),
@@ -680,16 +859,23 @@ function editEvent({ date, event: ev }) {
 /* chores */
 function renderChores(m) {
   const now = new Date(), k = ymd(now), dow = now.getDay();
-  m.append(h("div", { class: "toolbar" }, h("h2", {}, "Today's chores"), h("span", { class: "muted" }, now.toLocaleDateString([], { weekday: "long" })),
-    h("div", { class: "spacer" }), h("button", { class: "btn", onclick: () => { UI.tab = "settings"; render(); } }, "People"),
-    h("button", { class: "btn primary", onclick: () => editChore() }, "+ Chore")));
+  UI.choresView ||= "today";
+  m.append(h("div", { class: "toolbar" },
+    seg([["today", "Today's chores"], ["rewards", "⭐ Rewards"]], UI.choresView, v => { UI.choresView = v; render(); }),
+    UI.choresView === "today" ? h("span", { class: "muted" }, now.toLocaleDateString([], { weekday: "long" })) : null,
+    h("div", { class: "spacer" }),
+    h("button", { class: "btn", onclick: () => { UI.tab = "settings"; render(); } }, "People"),
+    UI.choresView === "today"
+      ? h("button", { class: "btn primary", onclick: () => editChore() }, "+ Chore")
+      : h("button", { class: "btn primary", onclick: () => editReward() }, "+ Reward")));
   const people = members().map(x => x.name);
-  if (STATE.chores.some(c => c.member === EVERYONE)) people.push(EVERYONE);
+  if (UI.choresView === "today" && STATE.chores.some(c => c.member === EVERYONE)) people.push(EVERYONE);
   if (!people.length) {
     m.append(h("div", { class: "empty-card" }, h("p", {}, "Add the people in your family first, then give each of them chores."),
       h("button", { class: "btn primary", onclick: () => { UI.tab = "settings"; render(); } }, "Add people")));
     return;
   }
+  if (UI.choresView === "rewards") return renderRewards(m);
   const board = h("div", { class: "board" });
   for (const p of people) {
     const list = STATE.chores.filter(c => c.member === p && c.days.includes(dow));
@@ -698,24 +884,31 @@ function renderChores(m) {
       h("div", { class: "col-h" }, avatar(p, true), h("div", { style: "flex:1" },
         h("div", { class: "pname" }, p, list.length && done === list.length ? " 🎉" : ""),
         h("div", { class: "muted small" }, `${done} of ${list.length} done`),
-        h("div", { class: "progress" }, h("i", { style: `width:${list.length ? done / list.length * 100 : 0}%` })))),
+        h("div", { class: "progress" }, h("i", { style: `width:${list.length ? done / list.length * 100 : 0}%` }))),
+        p !== EVERYONE ? h("div", { class: "star-total", title: "Stars" }, "⭐ ", starBalance(p)) : null),
       h("div", { class: "col-b" }, list.length ? list.map(c => choreRow(c, k)) : h("p", { class: "empty" }, "Nothing today ✨"))));
   }
   m.append(board);
 }
+const choreStars = ch => (ch.stars == null ? 1 : ch.stars);
 function choreRow(ch, k) {
-  const isDone = !!(ch.done && ch.done[k]);
+  const isDone = !!(ch.done && ch.done[k]), stars = ch.member === EVERYONE ? 0 : choreStars(ch);
   return h("div", { class: "chore" + (isDone ? " done" : ""), onclick: () => {
-      const target = !isDone;
+      const target = !isDone, logId = `c:${ch.id}:${k}`;
       commit(s => {
         const x = s.chores.find(x => x.id === ch.id); if (!x) return;
         x.done ||= {};
         if (target) x.done[k] = true; else delete x.done[k];
         const cutoff = ymd(addDays(new Date(), -30));
         for (const d of Object.keys(x.done)) if (d < cutoff) delete x.done[d];
+        s.star_log = s.star_log.filter(e => e.id !== logId);
+        if (target && stars) s.star_log.push({ id: logId, member: ch.member, delta: stars, reason: ch.title, date: k });
+        compactStars(s);
       });
+      if (target && stars) toast(`+${stars} ⭐ for ${ch.member}!`);
     } },
     h("span", { class: "ck" }, isDone ? "✓" : ""), h("span", { class: "ct" }, ch.title),
+    stars ? h("span", { class: "stars" }, "⭐".repeat(Math.min(stars, 3)) + (stars > 3 ? ` ${stars}` : "")) : null,
     h("button", { class: "kebab", "aria-label": "Edit chore", onclick: e => { e.stopPropagation(); editChore(ch); } }, "⋯"));
 }
 function editChore(ch) {
@@ -728,15 +921,113 @@ function editChore(ch) {
     const b = h("button", { type: "button", class: days.has(i) ? "on" : "", onclick: () => { days.has(i) ? days.delete(i) : days.add(i); b.classList.toggle("on", days.has(i)); } }, names[i]);
     return b;
   }));
+  let stars = ch ? choreStars(ch) : 1;
+  const starWrap = h("div", {});
+  const drawStars = () => starWrap.replaceChildren(seg([[0, "None"], [1, "⭐ 1"], [2, "2"], [3, "3"], [5, "5"]], stars, v => { stars = v; drawStars(); }));
+  drawStars();
   const id = ch ? ch.id : uid();
   const actions = [];
   if (ch) actions.push(["Delete", "danger", () => commit(s => { s.chores = s.chores.filter(x => x.id !== id); })]);
   actions.push(["Cancel", "", () => {}], ["Save", "primary", () => {
     const t = title.value.trim(); if (!t || !days.size) { title.focus(); return false; }
-    const rec = { title: t, member: who.value, days: [...days].sort() };
+    const rec = { title: t, member: who.value, days: [...days].sort(), stars };
     commit(s => { const x = s.chores.find(x => x.id === id); if (x) Object.assign(x, rec); else s.chores.push({ id, ...rec, done: {} }); });
   }]);
-  openModal(ch ? "Edit chore" : "New chore", h("div", {}, field("Chore", title), field("Who", who), field("Repeats on", pick)), actions);
+  openModal(ch ? "Edit chore" : "New chore", h("div", {}, field("Chore", title), field("Who", who), field("Repeats on", pick),
+    field("Stars for doing it", starWrap), h("p", { class: "muted small" }, "Stars only count for a person, not for “Everyone” chores.")), actions);
+}
+
+/* star rewards */
+const starBalance = name => STATE.star_log.reduce((n, e) => e.member === name ? n + e.delta : n, 0);
+function compactStars(s) {
+  // Keep the log small: fold entries older than 90 days into one "carried over" entry per person.
+  if (s.star_log.length < 600) return;
+  const cutoff = ymd(addDays(new Date(), -90)), carry = {};
+  s.star_log = s.star_log.filter(e => { if (e.date >= cutoff) return true; carry[e.member] = (carry[e.member] || 0) + e.delta; return false; });
+  for (const [member, delta] of Object.entries(carry))
+    s.star_log.unshift({ id: `carry:${member}:${cutoff}`, member, delta, reason: "Earlier stars", date: cutoff });
+}
+async function requireParent() {
+  // Spending stars and changing rewards needs the Settings PIN, if one is set.
+  if (API.demo || !CFG.pin) return true;
+  for (let tries = 0; ; tries++) {
+    if (PIN) {
+      try {
+        const r = await fetch("api/pin-check", { method: "POST", headers: { "X-Hearth-Pin": PIN } });
+        if (r.ok) return true;
+      } catch { toast("Can't reach the Hearth server right now."); return false; }
+      PIN = "";
+    }
+    if (!(await askPin(tries > 0))) return false;
+  }
+}
+function renderRewards(m) {
+  const kids = members().map(x => x.name);
+  const wrap = h("div", { class: "rewards" });
+  wrap.append(h("div", { class: "star-row" }, kids.map(p => h("div", { class: "star-card", style: `--c:${colorOf(p)}` },
+    avatar(p, true), h("div", { class: "grow" }, h("b", {}, p), h("div", { class: "star-big" }, "⭐ ", starBalance(p))),
+    h("div", { class: "adj" },
+      h("button", { class: "btn icon", "aria-label": `Give ${p} a star`, onclick: () => adjustStars(p, 1) }, "+"),
+      h("button", { class: "btn icon", "aria-label": `Take a star from ${p}`, onclick: () => adjustStars(p, -1) }, "−"))))));
+  const rewards = STATE.rewards;
+  wrap.append(h("h3", {}, "Rewards to earn"));
+  if (!rewards.length) wrap.append(h("div", { class: "empty-card" },
+    h("p", {}, "Add rewards the kids can spend their stars on, like 30 minutes of screen time or picking dinner."),
+    h("button", { class: "btn primary", onclick: () => editReward() }, "+ Add a reward")));
+  else wrap.append(h("div", { class: "reward-grid" }, rewards.map(rw => {
+    const can = kids.filter(p => starBalance(p) >= rw.cost);
+    const closest = kids.map(p => [p, rw.cost - starBalance(p)]).sort((a, b) => a[1] - b[1])[0];
+    return h("div", { class: "reward" },
+      h("button", { class: "kebab corner", "aria-label": "Edit reward", onclick: () => editReward(rw) }, "⋯"),
+      h("div", { class: "reward-emoji" }, rw.emoji || "🎁"),
+      h("div", { class: "reward-title" }, rw.title),
+      h("div", { class: "reward-cost" }, `⭐ ${rw.cost}`),
+      can.length
+        ? h("div", { class: "redeem" }, can.map(p => h("button", { class: "btn", style: `--c:${colorOf(p)}`, onclick: () => redeem(p, rw) }, avatar(p), `${p} gets it`)))
+        : h("div", { class: "muted small" }, closest ? `${closest[0]} needs ${closest[1]} more` : ""));
+  })));
+  const recent = [...STATE.star_log].reverse().slice(0, 12);
+  if (recent.length) wrap.append(h("h3", {}, "Recent stars"), h("div", { class: "star-log" }, recent.map(e => h("div", { class: "srow" },
+    avatar(e.member), h("div", { class: "grow" }, e.reason, h("span", { class: "muted small" }, " · " + parseYmd(e.date).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" }))),
+    h("b", { class: e.delta < 0 ? "neg" : "pos" }, (e.delta > 0 ? "+" : "") + e.delta)))));
+  m.append(wrap);
+}
+async function adjustStars(p, delta) {
+  if (!(await requireParent())) return;
+  const id = uid(), today = ymd(new Date());
+  commit(s => { s.star_log.push({ id, member: p, delta, reason: delta > 0 ? "Bonus star" : "Star taken away", date: today }); compactStars(s); });
+}
+async function redeem(p, rw) {
+  if (!(await requireParent())) return;
+  openModal(`${rw.emoji || "🎁"} ${rw.title} for ${p}?`, h("p", {}, `This spends ${rw.cost} of ${p}'s ${starBalance(p)} stars.`),
+    [["Cancel", "", () => {}], ["Yes, enjoy!", "primary", () => {
+      const id = uid(), today = ymd(new Date());
+      commit(s => { s.star_log.push({ id, member: p, delta: -rw.cost, reason: `${rw.emoji || "🎁"} ${rw.title}`, date: today }); compactStars(s); });
+      toast(`🎉 ${p} got ${rw.title}!`);
+    }]]);
+}
+const REWARD_IDEAS = [["📱", "30 min screen time", 5], ["🍦", "Ice cream", 10], ["🍕", "Pick dinner", 8],
+  ["🎬", "Pick movie night", 15], ["🌙", "Stay up 30 min late", 10], ["💵", "$5", 25]];
+async function editReward(rw) {
+  if (!(await requireParent())) return;
+  const emoji = h("input", { value: rw ? rw.emoji || "" : "🎁", maxlength: 4, class: "emoji-in" });
+  const title = h("input", { value: rw ? rw.title : "", placeholder: "e.g. Ice cream", maxlength: 40 });
+  const cost = h("input", { type: "number", min: 1, max: 999, value: rw ? rw.cost : 10, inputmode: "numeric" });
+  const ideas = rw ? null : h("div", { class: "chips-wrap" }, REWARD_IDEAS.map(([e, t, c]) => h("button", { type: "button", class: "pchip idea-chip",
+    onclick: () => { emoji.value = e; title.value = t; cost.value = c; } }, `${e} ${t}`)));
+  const id = rw ? rw.id : uid();
+  const actions = [];
+  if (rw) actions.push(["Delete", "danger", () => commit(s => { s.rewards = s.rewards.filter(x => x.id !== id); })]);
+  actions.push(["Cancel", "", () => {}], ["Save", "primary", () => {
+    const t = title.value.trim(), c = Math.round(+cost.value);
+    if (!t) { title.focus(); return false; }
+    if (!(c >= 1 && c <= 999)) { cost.focus(); return false; }
+    const rec = { emoji: emoji.value.trim(), title: t, cost: c };
+    commit(s => { const x = s.rewards.find(x => x.id === id); if (x) Object.assign(x, rec); else s.rewards.push({ id, ...rec }); });
+  }]);
+  openModal(rw ? "Edit reward" : "New reward", h("div", {}, ideas ? field("Ideas", ideas) : null,
+    h("div", { class: "row" }, h("div", { class: "field", style: "flex:0 0 90px" }, h("label", {}, "Emoji"), emoji), field("Reward", title)),
+    field("Stars it costs", cost)), actions);
 }
 
 /* lists */
@@ -1047,7 +1338,7 @@ function renderSettings(m) {
     sect("Weather", "Shown next to the clock.", weatherEditor()),
     sect("Display", null, displayEditor()),
     sect("Recipe database (optional)", "Finds real recipes, with photos and full steps, that use the food in your pantry list. Uses Spoonacular; their free plan covers a handful of searches a day, and Hearth remembers results for a few hours so repeat searches are free.", recipesEditor()),
-    sect("Meal ideas (optional)", "Suggests meals from the food in your pantry list, using Claude. It needs a Claude API key; Anthropic bills the account each time you ask for ideas.", aiEditor()),
+    sect("Claude AI (optional)", "Adds \ud83d\udcf7 Import on the calendar (turn photos of flyers, PDFs and emails into events) and meal ideas from your pantry. It needs a Claude API key; Anthropic bills the account each time you use it.", aiEditor()),
     sect("Lock settings", "Set a PIN so nobody changes these settings by accident from the wall screen. Chores, lists and events still work without it.", pinEditor()));
   if (!API.demo && location.host) wrap.append(sect("Use it from your phone", null,
     h("p", {}, "On any phone or computer on your home Wi-Fi, open ", h("b", {}, `http://${location.host}`), " to add groceries, tick off chores or link calendars.")));
@@ -1190,7 +1481,7 @@ function displayEditor() {
     h("label", {}, "Calendar name"), title,
     h("label", {}, "Text size"), seg([[0.9, "Small"], [1, "Normal"], [1.25, "Large"], [1.5, "Huge"]], CFG.ui_scale || 1, v => saveSettings({ ui_scale: v })),
     h("label", {}, "Week starts on"), seg([[0, "Sunday"], [1, "Monday"]], CFG.week_start || 0, v => saveSettings({ week_start: v })),
-    h("label", {}, "Start screen"), seg([["week", "Week"], ["month", "Month"], ["agenda", "Agenda"]], CFG.default_view || "week", v => saveSettings({ default_view: v })),
+    h("label", {}, "Start screen"), seg([["day", "Day"], ["week", "Week"], ["month", "Month"], ["agenda", "Agenda"]], CFG.default_view || "week", v => saveSettings({ default_view: v })),
     h("label", {}, "Check calendars every"), seg([[2, "2 min"], [5, "5 min"], [10, "10 min"], [30, "30 min"]], CFG.refresh_minutes || 10, v => saveSettings({ refresh_minutes: v })),
     h("label", {}, "Go back to today after"), seg([[1, "1 min"], [3, "3 min"], [10, "10 min"]], CFG.idle_reset_minutes || 3, v => saveSettings({ idle_reset_minutes: v })),
     h("label", {}, "Dark screen at night"), h("div", {},
@@ -1224,7 +1515,7 @@ function recipesEditor() {
 function aiEditor() {
   if (CFG.ai_enabled) return h("div", {},
     h("div", { class: "srow" }, h("div", { class: "grow" }, h("b", {}, "Turned on"), h("div", { class: "muted small" }, `API key ${CFG.ai_key_hint}`)),
-      h("button", { class: "btn danger", onclick: () => saveSettings({ anthropic_api_key: "" }).then(ok => { if (ok) toast("Meal ideas turned off"); }) }, "Turn off")),
+      h("button", { class: "btn danger", onclick: () => saveSettings({ anthropic_api_key: "" }).then(ok => { if (ok) toast("Claude features turned off"); }) }, "Turn off")),
     h("div", { class: "srow" }, h("div", { class: "grow" }, "Model"),
       seg([["claude-haiku-5-5", "Fast & cheap"], ["claude-sonnet-5-5", "Smarter"]], CFG.ai_model, v => saveSettings({ ai_model: v }))));
   const key = h("input", { type: "password", placeholder: "Paste your Claude API key (starts with sk-ant-)", autocomplete: "off" });
@@ -1234,7 +1525,7 @@ function aiEditor() {
     if (busy || !key.value.trim()) return;
     busy = true; status.className = "status"; status.textContent = "Checking the key\u2026";
     settingsCall("PUT", "api/settings", { anthropic_api_key: key.value.trim() })
-      .then(() => { toast("Meal ideas turned on"); render(); })
+      .then(() => { toast("Claude features turned on"); render(); })
       .catch(e => { busy = false; errMsg(status, e); });
   };
   key.addEventListener("keydown", e => { if (e.key === "Enter") go(); });

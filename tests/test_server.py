@@ -130,6 +130,32 @@ class HearthServerTest(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertIn("Claude", body["error"])
 
+    def test_09_pin_check_and_day_view(self):
+        status, _ = self.call("POST", "/api/pin-check", {})
+        self.assertEqual(status, 200)  # no PIN set
+        status, body = self.call("PUT", "/api/settings", {"default_view": "day"})
+        self.assertEqual(status, 200)
+        self.assertEqual(body["config"]["default_view"], "day")
+        status, _ = self.call("PUT", "/api/settings", {"default_view": "year"})
+        self.assertEqual(status, 400)
+        self.call("PUT", "/api/settings", {"pin": "2468"})
+        status, _ = self.call("POST", "/api/pin-check", {}, {"X-Hearth-Pin": "1111"})
+        self.assertEqual(status, 403)
+        status, _ = self.call("POST", "/api/pin-check", {}, {"X-Hearth-Pin": "2468"})
+        self.assertEqual(status, 200)
+        self.call("PUT", "/api/settings", {"pin": ""}, {"X-Hearth-Pin": "2468"})
+
+    def test_10_import_needs_claude(self):
+        status, body = self.call("POST", "/api/import-events", {"text": "Picture day is Dec 3"})
+        self.assertEqual(status, 400)
+        self.assertIn("Claude", body["error"])
+
+    def test_11_state_has_rewards(self):
+        status, state = self.call("GET", "/api/state")
+        self.assertEqual(status, 200)
+        self.assertEqual(state["rewards"], [])
+        self.assertEqual(state["star_log"], [])
+
     def test_08_serves_app(self):
         with urllib.request.urlopen(f"http://127.0.0.1:{self.port}/?kiosk=1", timeout=5) as resp:
             self.assertEqual(resp.status, 200)

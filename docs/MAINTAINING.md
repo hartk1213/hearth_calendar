@@ -2,7 +2,7 @@
 
 ## Publishing the first time
 
-1. Create an empty **public** repository named `hearth` on GitHub under `hartk1213`. Don't add a README, license or .gitignore there; this repo already has them.
+1. Create an empty **public** repository named `hearth_calendar` on GitHub under `hartk1213`. Don't add a README, license or .gitignore there; this repo already has them.
 2. Push this folder to it (see the main instructions you were given, or use GitHub Desktop).
 3. Open the **Actions** tab. The *Test and publish* workflow runs the tests, then builds the Docker image. The first build takes about 5 to 10 minutes because it builds for both PC and Raspberry Pi.
 4. **Make the image public** (it starts out private): on your GitHub profile, open **Packages → hearth → Package settings → Change visibility → Public**. Until you do this, Unraid and Docker can't download it.
